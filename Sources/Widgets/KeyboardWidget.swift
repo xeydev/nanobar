@@ -1,44 +1,25 @@
-import AppKit
-import QuartzCore
-import Monitors
+import SwiftUI
 
-@MainActor
-public final class KeyboardWidget: BarWidget {
-    public let layer: CALayer = KeyboardLayer()
-    private var layout: String = "US"
+public struct KeyboardView: View {
+    let layout: String
+    @State private var wiggle = false
 
-    public var intrinsicWidth: CGFloat {
-        let lw = measureText(layout, font: Theme.labelFont)
-        let iw = Theme.iconSize + Theme.iconPadLeft + Theme.iconPadRight
-        return iw + lw + Theme.labelPadLeft + Theme.labelPadRight + Theme.itemPadBg * 2
-    }
+    public init(layout: String) { self.layout = layout }
 
-    public func place(at origin: CGPoint, height: CGFloat) {
-        layer.frame = CGRect(x: origin.x, y: origin.y, width: intrinsicWidth, height: height)
-        layer.setNeedsDisplay()
-    }
-
-    public func update(layout: String) {
-        self.layout = layout
-        (layer as? KeyboardLayer)?.layout = layout
-        layer.setNeedsDisplay()
-    }
-}
-
-private final class KeyboardLayer: CALayer {
-    var layout: String = "US"
-
-    override init() { super.init(); drawsAsynchronously = true }
-    override init(layer: Any) { super.init(layer: layer) }
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func draw(in ctx: CGContext) {
-        ctx.drawItemBackground(in: bounds)
-        let icon = ""  // keyboard icon
-        let baseline: CGFloat = (bounds.height - Theme.iconSize) / 2 + 2
-        var x: CGFloat = Theme.itemPadBg + Theme.iconPadLeft
-        x += ctx.drawText(icon, font: Theme.iconFont, color: Theme.keyboardColor, at: CGPoint(x: x, y: baseline))
-        x += Theme.iconPadRight + Theme.labelPadLeft
-        ctx.drawText(layout, font: Theme.labelFont, color: Theme.labelColor, at: CGPoint(x: x, y: baseline))
+    public var body: some View {
+        HStack(spacing: Theme.iconLabelSpacing) {
+            Image(systemName: "keyboard.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 18, height: 13)
+                .foregroundStyle(Theme.keyboardColor)
+                .symbolEffect(.bounce, options: .nonRepeating, value: wiggle)
+            Text(layout)
+                .font(.system(size: Theme.labelSize, weight: .semibold))
+                .foregroundStyle(Theme.labelColor)
+                .stableMinWidth()
+        }
+        .glassPill()
+        .onChange(of: layout) { wiggle.toggle() }
     }
 }

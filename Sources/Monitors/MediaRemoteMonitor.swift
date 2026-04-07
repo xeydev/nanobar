@@ -14,9 +14,10 @@ public struct NowPlayingInfo: Sendable {
 public final class MediaRemoteMonitor: @unchecked Sendable {
     public static let shared = MediaRemoteMonitor()
 
-    private var observers: [@MainActor (NowPlayingInfo) -> Void] = []
+    private let broadcaster = MonitorBroadcaster<NowPlayingInfo>()
+
     public func register(_ observer: @escaping @MainActor (NowPlayingInfo) -> Void) {
-        observers.append(observer)
+        broadcaster.register(observer)
     }
 
     private var process: Process?
@@ -67,7 +68,6 @@ public final class MediaRemoteMonitor: @unchecked Sendable {
             artist: artist.flatMap { $0.isEmpty ? nil : $0 },
             isPlaying: rate > 0
         )
-        let obs = observers
-        DispatchQueue.main.async { obs.forEach { $0(info) } }
+        broadcaster.notify(info)
     }
 }

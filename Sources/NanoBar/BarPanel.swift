@@ -1,19 +1,19 @@
 import AppKit
+import SwiftUI
 import Widgets
-import QuartzCore
 
-/// A floating panel that renders the status bar for a single NSScreen.
 @MainActor
 final class BarPanel: NSPanel {
-    private let barView: BarView
     private let associatedScreen: NSScreen
+    private var menuBarVisible = false
 
-    init(screen: NSScreen) {
+    init(screen: NSScreen, monitorID: Int, state: BarState) {
         self.associatedScreen = screen
-
-        let frame = BarPanel.barFrame(for: screen)
-        let view = BarView(frame: CGRect(origin: .zero, size: frame.size), screen: screen)
-        self.barView = view
+        let frame    = BarPanel.barFrame(for: screen)
+        let isBuiltIn = screen.localizedName.lowercased().contains("built-in")
+        let rootView = BarRootView(isBuiltIn: isBuiltIn, monitorID: monitorID)
+            .environmentObject(state)
+        let hosting  = NSHostingView(rootView: rootView)
 
         super.init(
             contentRect: frame,
@@ -22,32 +22,39 @@ final class BarPanel: NSPanel {
             defer: false
         )
 
-        // Float above all normal windows, below system overlays
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)) + 1)
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        isMovableByWindowBackground = false
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        ignoresMouseEvents = false
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = CGColor(red: 0, green: 0, blue: 0, alpha: 0)
 
-        contentView = view
+        level                     = .statusBar
+        collectionBehavior        = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        isMovableByWindowBackground = false
+        isOpaque                  = false
+        backgroundColor           = .clear
+        hasShadow                 = false
+        ignoresMouseEvents        = false
+        contentView               = hosting
+    }
+
+    func adjustForMenuBar(visible: Bool) {
+        guard visible != menuBarVisible else { return }
+        menuBarVisible = visible
+        var target = BarPanel.barFrame(for: associatedScreen)
+        if visible { target.origin.y = associatedScreen.frame.maxY }
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = Theme.menuBarAnimDuration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animator().setFrame(target, display: true)
+            animator().alphaValue = visible ? 0 : 1
+        }
     }
 
     static func barFrame(for screen: NSScreen) -> CGRect {
         let sf = screen.frame
-        let height: CGFloat = 30
-        let margin: CGFloat = 8
         return CGRect(
-            x: sf.minX + margin,
-            y: sf.maxY - height - margin,
-            width: sf.width - margin * 2,
-            height: height
+            x: sf.minX,
+            y: sf.maxY - Theme.barHeight - Theme.barMargin * 2,
+            width:  sf.width,
+            height: Theme.barHeight + Theme.barMargin * 2
         )
-    }
-
-    static func isBuiltIn(_ screen: NSScreen) -> Bool {
-        screen.localizedName.lowercased().contains("built-in") ||
-        screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID == CGMainDisplayID()
     }
 }

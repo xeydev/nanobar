@@ -3,7 +3,12 @@ import Foundation
 /// Fires every 30 seconds, aligned to :00 and :30 boundaries.
 public final class ClockMonitor: @unchecked Sendable {
     public static let shared = ClockMonitor()
-    public var onChange: (@MainActor (String) -> Void)?
+
+    private let broadcaster = MonitorBroadcaster<String>()
+
+    public func register(_ observer: @escaping @MainActor (String) -> Void) {
+        broadcaster.register(observer)
+    }
 
     private static let formatter: DateFormatter = {
         let f = DateFormatter()
@@ -16,20 +21,15 @@ public final class ClockMonitor: @unchecked Sendable {
     private init() {}
 
     public func start() {
-        tick() // immediate first value
+        tick()
         scheduleTimer()
     }
 
     private func scheduleTimer() {
         let t = DispatchSource.makeTimerSource(queue: .main)
-        // Align to next :00 or :30 boundary
         let now = Date()
         let secondsToNext = 30.0 - (now.timeIntervalSince1970.truncatingRemainder(dividingBy: 30.0))
-        t.schedule(
-            wallDeadline: .now() + secondsToNext,
-            repeating: 30.0,
-            leeway: .milliseconds(500)
-        )
+        t.schedule(wallDeadline: .now() + secondsToNext, repeating: 30.0, leeway: .milliseconds(500))
         t.setEventHandler { [weak self] in self?.tick() }
         t.resume()
         timer = t
@@ -37,9 +37,6 @@ public final class ClockMonitor: @unchecked Sendable {
 
     private func tick() {
         let text = ClockMonitor.formatter.string(from: Date())
-        let cb = onChange
-        DispatchQueue.main.async {
-            cb?(text)
-        }
+        broadcaster.notify(text)
     }
 }

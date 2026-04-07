@@ -14,8 +14,7 @@ let package = Package(
             name: "NanoBar",
             dependencies: ["Widgets", "Monitors", "AeroSpaceClient"],
             path: "Sources/NanoBar",
-            resources: [.copy("sketchybar-app-font.ttf")],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "Widgets",
