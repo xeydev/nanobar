@@ -6,6 +6,11 @@ let package = Package(
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
+            name: "NowPlayingHelper",
+            path: "Sources/NowPlayingHelper",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .executableTarget(
             name: "NanoBar",
             dependencies: ["Widgets", "Monitors", "AeroSpaceClient"],
             path: "Sources/NanoBar",

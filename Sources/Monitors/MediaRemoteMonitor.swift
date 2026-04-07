@@ -4,90 +4,70 @@ public struct NowPlayingInfo: Sendable {
     public let title: String?
     public let artist: String?
     public let isPlaying: Bool
-
     public init(title: String?, artist: String?, isPlaying: Bool) {
-        self.title = title
-        self.artist = artist
-        self.isPlaying = isPlaying
+        self.title = title; self.artist = artist; self.isPlaying = isPlaying
     }
 }
 
-/// Push-based now-playing monitor via MediaRemote private framework.
-/// Replaces the 2-second polling spotify_watcher.sh entirely.
+/// Push-based now-playing monitor via a persistent NowPlayingHelper subprocess.
+/// The helper subscribes to MediaRemote notifications and writes a JSON line per change.
 public final class MediaRemoteMonitor: @unchecked Sendable {
     public static let shared = MediaRemoteMonitor()
-    public var onChange: (@MainActor (NowPlayingInfo) -> Void)?
 
-    // MediaRemote function pointers loaded at runtime
-    private typealias MRRegisterFn = @convention(c) (DispatchQueue) -> Void
-    private typealias MRGetNowPlayingFn = @convention(c) (DispatchQueue, @escaping ([String: Any]?) -> Void) -> Void
+    private var observers: [@MainActor (NowPlayingInfo) -> Void] = []
+    public func register(_ observer: @escaping @MainActor (NowPlayingInfo) -> Void) {
+        observers.append(observer)
+    }
 
-    private var mrHandle: UnsafeMutableRawPointer?
-    private var mrRegister: MRRegisterFn?
-    private var mrGetNowPlaying: MRGetNowPlayingFn?
-
+    private var process: Process?
     private init() {}
 
+    private static let helperURL: URL = {
+        let exe = URL(fileURLWithPath: CommandLine.arguments[0])
+        return exe.deletingLastPathComponent().appendingPathComponent("NowPlayingHelper")
+    }()
+
     public func start() {
-        guard loadFramework() else { return }
-        registerForNotifications()
-        fetchNowPlaying() // initial value
-    }
-
-    private func loadFramework() -> Bool {
-        let path = "/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote"
-        guard let handle = dlopen(path, RTLD_NOW) else { return false }
-        mrHandle = handle
-
-        mrRegister = unsafeBitCast(
-            dlsym(handle, "MRMediaRemoteRegisterForNowPlayingNotifications"),
-            to: MRRegisterFn?.self
-        )
-        mrGetNowPlaying = unsafeBitCast(
-            dlsym(handle, "MRMediaRemoteGetNowPlayingInfo"),
-            to: MRGetNowPlayingFn?.self
-        )
-        return mrRegister != nil && mrGetNowPlaying != nil
-    }
-
-    private func registerForNotifications() {
-        mrRegister?(.main)
-
-        let center = CFNotificationCenterGetDarwinNotifyCenter()
-        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
-
-        let callback: CFNotificationCallback = { _, observer, _, _, _ in
-            guard let observer else { return }
-            let monitor = Unmanaged<MediaRemoteMonitor>.fromOpaque(observer).takeUnretainedValue()
-            monitor.fetchNowPlaying()
+        let proc = Process()
+        proc.executableURL = Self.helperURL
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = Pipe()
+        proc.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self?.start() }
         }
+        guard (try? proc.run()) != nil else { return }
+        process = proc
 
-        CFNotificationCenterAddObserver(
-            center, selfPtr, callback,
-            "kMRMediaRemoteNowPlayingInfoDidChangeNotification" as CFString,
-            nil, .deliverImmediately
-        )
-        CFNotificationCenterAddObserver(
-            center, selfPtr, callback,
-            "kMRMediaRemoteNowPlayingApplicationDidChangeNotification" as CFString,
-            nil, .deliverImmediately
-        )
-        CFNotificationCenterAddObserver(
-            center, selfPtr, callback,
-            "kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification" as CFString,
-            nil, .deliverImmediately
-        )
-    }
-
-    func fetchNowPlaying() {
-        mrGetNowPlaying?(.main) { [weak self] dict in
+        let fh = pipe.fileHandleForReading
+        fh.readabilityHandler = { [weak self] handle in
             guard let self else { return }
-            let title   = dict?["kMRMediaRemoteNowPlayingInfoTitle"] as? String
-            let artist  = dict?["kMRMediaRemoteNowPlayingInfoArtist"] as? String
-            let rate    = dict?["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
-            let info = NowPlayingInfo(title: title, artist: artist, isPlaying: rate > 0)
-            let cb = self.onChange
-            DispatchQueue.main.async { cb?(info) }
+            let data = handle.availableData
+            guard !data.isEmpty,
+                  let text = String(data: data, encoding: .utf8) else { return }
+            for line in text.components(separatedBy: "\n") {
+                self.handle(line: line)
+            }
         }
+    }
+
+    private func handle(line: String) {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty,
+              let data = trimmed.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+
+        let title  = json["title"]  as? String
+        let artist = json["artist"] as? String
+        let rate   = json["rate"]   as? Double ?? 0
+
+        let info = NowPlayingInfo(
+            title:  title.flatMap  { $0.isEmpty ? nil : $0 },
+            artist: artist.flatMap { $0.isEmpty ? nil : $0 },
+            isPlaying: rate > 0
+        )
+        let obs = observers
+        DispatchQueue.main.async { obs.forEach { $0(info) } }
     }
 }
