@@ -48,12 +48,10 @@ private struct LabelOnlyPill: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            Text(state.id)
-                .font(.system(size: Theme.labelSize, weight: .semibold))
-                .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
-        }
-        .glassPill(focused: state.isFocused, hovered: isHovered)
+        Text(state.id)
+            .font(.system(size: Theme.labelSize, weight: .semibold))
+            .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
+            .glassPill(focused: state.isFocused, hovered: isHovered)
         .interactiveRegion()
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture {
@@ -97,7 +95,6 @@ private struct ClampExpandPill: View {
     @Binding var hoveredID: String?
 
     private var isHovered: Bool { hoveredID == state.id }
-    private var anotherHovered: Bool { hoveredID != nil && hoveredID != state.id }
 
     /// How many icons to show. Snaps to whole icons — no partial clipping.
     private var visibleIconCount: Int {

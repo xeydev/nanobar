@@ -1,6 +1,6 @@
 import Foundation
 
-public struct WorkspaceState: Sendable {
+public struct WorkspaceState: Sendable, Equatable {
     public let id: String
     public let isFocused: Bool
     public let windows: [WindowInfo]
@@ -14,7 +14,7 @@ public struct WorkspaceState: Sendable {
     }
 }
 
-public struct WindowInfo: Sendable {
+public struct WindowInfo: Sendable, Equatable {
     public let windowID: Int
     public let appName: String
 

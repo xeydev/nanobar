@@ -8,6 +8,7 @@ public final class AeroSpaceMonitor: @unchecked Sendable {
     private let broadcaster = MonitorBroadcaster<[WorkspaceState]>()
     private var cachedStates: [WorkspaceState] = []
     private var lastWorkspaceChangeTime: Date = .distantPast
+    private var appTerminationObserver: NSObjectProtocol?
 
     public func register(_ observer: @escaping @MainActor ([WorkspaceState]) -> Void) {
         broadcaster.register(observer)
@@ -19,10 +20,14 @@ public final class AeroSpaceMonitor: @unchecked Sendable {
 
     private init() {}
 
+    deinit {
+        appTerminationObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+    }
+
     public func start() {
         Task { await fetchAndNotify() }
         startNotifySocket()
-        NSWorkspace.shared.notificationCenter.addObserver(
+        appTerminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification,
             object: nil, queue: .main
         ) { [weak self] notification in
@@ -238,6 +243,7 @@ public final class AeroSpaceMonitor: @unchecked Sendable {
     }
 
     private func updateAndBroadcast(_ states: [WorkspaceState]) {
+        guard states != cachedStates else { return }
         cachedStates = states
         broadcaster.notify(states)
     }
