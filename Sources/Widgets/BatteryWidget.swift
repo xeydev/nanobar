@@ -1,5 +1,5 @@
-import SwiftUI
 import Monitors
+import SwiftUI
 
 public struct BatteryView: View {
     let info: BatteryInfo
@@ -7,9 +7,9 @@ public struct BatteryView: View {
     public init(info: BatteryInfo) { self.info = info }
 
     private var color: Color {
-        if info.isCharging || info.percentage > 60 { return Theme.batteryGreen  }
-        if info.percentage > 40                    { return Theme.batteryYellow }
-        if info.percentage > 20                    { return Theme.batteryOrange }
+        if info.isCharging || info.percentage > 75 { return Theme.batteryGreen }
+        if info.percentage > 50 { return Theme.batteryYellow }
+        if info.percentage > 25 { return Theme.batteryOrange }
         return Theme.batteryRed
     }
 
