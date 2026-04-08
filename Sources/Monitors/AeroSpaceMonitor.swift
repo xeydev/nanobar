@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import AeroSpaceClient
 
@@ -19,6 +20,10 @@ public final class AeroSpaceMonitor: @unchecked Sendable {
     public func start() {
         Task { await fetchAndNotify() }
         startNotifySocket()
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in Task { await self?.fetchAndNotify() } }
     }
 
     private func startNotifySocket() {

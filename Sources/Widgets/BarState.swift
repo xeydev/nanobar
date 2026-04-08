@@ -17,6 +17,10 @@ public final class BarState: ObservableObject {
         VolumeMonitor.shared.register     { [weak self] v in self?.volume          = v }
         KeyboardMonitor.shared.register   { [weak self] v in self?.keyboardLayout  = v }
         MediaRemoteMonitor.shared.register{ [weak self] v in self?.nowPlaying      = v }
-        AeroSpaceMonitor.shared.register  { [weak self] v in self?.workspaceStates = v }
+        AeroSpaceMonitor.shared.register  { [weak self] v in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                self?.workspaceStates = v
+            }
+        }
     }
 }

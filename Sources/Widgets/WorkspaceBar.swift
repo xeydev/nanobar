@@ -48,15 +48,17 @@ private struct LabelOnlyPill: View {
     @State private var isHovered = false
 
     var body: some View {
-        Text(state.id)
-            .font(.system(size: Theme.labelSize, weight: .semibold))
-            .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
-            .glassPill(focused: state.isFocused, hovered: isHovered)
-            .interactiveRegion()
-            .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
-            .onTapGesture {
-                Task { try? await AeroSpaceClient.shared.run(args: ["workspace", state.id]) }
-            }
+        HStack(spacing: 0) {
+            Text(state.id)
+                .font(.system(size: Theme.labelSize, weight: .semibold))
+                .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
+        }
+        .glassPill(focused: state.isFocused, hovered: isHovered)
+        .interactiveRegion()
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering } }
+        .onTapGesture {
+            Task { try? await AeroSpaceClient.shared.run(args: ["workspace", state.id]) }
+        }
     }
 }
 
@@ -97,12 +99,10 @@ private struct ClampExpandPill: View {
     private var isHovered: Bool { hoveredID == state.id }
     private var anotherHovered: Bool { hoveredID != nil && hoveredID != state.id }
 
-    /// Width budget for the icon strip. The label is fixed-size and never affected.
-    private var iconMaxWidth: CGFloat {
-        let slot = Theme.appIconSize + 4
-        if isHovered      { return CGFloat(min(state.windows.count, 5)) * slot + 4 }
-        if anotherHovered { return 0 }
-        return CGFloat(min(state.windows.count, 2)) * slot + 4  // ~2 icons at rest
+    /// How many icons to show. Snaps to whole icons — no partial clipping.
+    private var visibleIconCount: Int {
+        if isHovered || state.isFocused { return min(state.windows.count, 5) }
+        return 0
     }
 
     var body: some View {
@@ -112,14 +112,13 @@ private struct ClampExpandPill: View {
                 .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
                 .fixedSize()
 
-            if !state.windows.isEmpty {
+            if visibleIconCount > 0 {
                 HStack(spacing: 4) {
-                    ForEach(state.windows.prefix(5), id: \.windowID) { window in
+                    ForEach(state.windows.prefix(visibleIconCount), id: \.windowID) { window in
                         AppIconView(window: window)
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
                     }
                 }
-                .frame(minWidth: 0, maxWidth: iconMaxWidth, alignment: .leading)
-                .clipped()
             }
         }
         .glassPill(focused: state.isFocused, hovered: isHovered)

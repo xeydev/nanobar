@@ -26,7 +26,7 @@ public struct BatteryView: View {
     }
 
     private var icon: some View {
-        let symbolName = info.isCharging ? "battery.100.bolt" : "battery.100"
+        let symbolName = info.isCharging ? "battery.100percent.bolt" : "battery.100percent"
         return Image(systemName: symbolName, variableValue: Double(info.percentage) / 100.0)
             .font(.system(size: 16))
             .foregroundStyle(color)

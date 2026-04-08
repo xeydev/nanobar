@@ -31,7 +31,6 @@ public struct BarRootView: View {
         HStack(spacing: 0) {
             HStack(spacing: Theme.itemGap) {
                 WorkspaceBarView(states: filteredStates)
-                NowPlayingView(info: state.nowPlaying)
                 Spacer(minLength: 0)
             }
             .padding(Theme.barMargin)
@@ -40,6 +39,7 @@ public struct BarRootView: View {
 
             HStack(spacing: Theme.itemGap) {
                 Spacer(minLength: 0)
+                NowPlayingView(info: state.nowPlaying)
                 rightWidgets
             }
             .padding(Theme.barMargin)
