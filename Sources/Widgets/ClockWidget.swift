@@ -5,9 +5,9 @@ public struct ClockView: View {
 
     public init(text: String) { self.text = text }
 
+    @ViewBuilder
     public var body: some View {
-        guard !text.isEmpty else { return AnyView(EmptyView()) }
-        return AnyView(
+        if !text.isEmpty {
             HStack(spacing: Theme.iconLabelSpacing) {
                 Image(systemName: "calendar")
                     .resizable()
@@ -20,6 +20,6 @@ public struct ClockView: View {
                     .stableMinWidth()
             }
             .glassPill()
-        )
+        }
     }
 }

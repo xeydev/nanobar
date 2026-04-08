@@ -5,7 +5,6 @@ public final class AeroSpaceClient: @unchecked Sendable {
     public static let shared = AeroSpaceClient()
     private init() {}
 
-    /// Possible locations for the aerospace binary.
     private static let binaryPaths = [
         "/opt/homebrew/bin/aerospace",
         "/usr/local/bin/aerospace",
@@ -26,7 +25,7 @@ public final class AeroSpaceClient: @unchecked Sendable {
             process.arguments = args
             let pipe = Pipe()
             process.standardOutput = pipe
-            process.standardError = Pipe()  // suppress stderr
+            process.standardError = Pipe()
             process.terminationHandler = { _ in
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 continuation.resume(returning: String(data: data, encoding: .utf8) ?? "")

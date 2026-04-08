@@ -1,6 +1,5 @@
 import AppKit
 import Carbon
-import Combine
 import Widgets
 import Monitors
 import AeroSpaceClient
@@ -9,8 +8,7 @@ import AeroSpaceClient
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
     private let barState = BarState()
-    private var globalMouseMonitor: Any?
-    private var hoverCancellable: AnyCancellable?
+    private var mouseMonitors: [Any] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -29,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AeroSpaceMonitor.shared.start()
 
         installMenuBarCarbonHandler()
-        installMousePassThrough()
+        installMouseMonitors()
     }
 
     private func setupBars() {
@@ -75,27 +73,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         barPanels.forEach { $0.adjustForMenuBar(visible: visible) }
     }
 
-    // MARK: - Mouse pass-through for non-interactive areas
+    // MARK: - Mouse pass-through
 
-    private func installMousePassThrough() {
-        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            DispatchQueue.main.async { self?.syncPanelMouseState() }
-        }
-        // When no interactive element is hovered, re-enable pass-through so
-        // background clicks reach windows below.
-        hoverCancellable = barState.$isHoveringInteractive.sink { [weak self] hovering in
-            guard let self, !hovering else { return }
-            self.barPanels.forEach { $0.ignoresMouseEvents = true }
-        }
+    // Toggles ignoresMouseEvents per-panel based on whether the cursor is over
+    // an interactive region. Global monitor fires when events go to other apps
+    // (ignoresMouseEvents = true). Local monitor fires when they come to us.
+    private func installMouseMonitors() {
+        let handler: (NSEvent) -> Void = { [weak self] _ in self?.syncMousePassThrough() }
+        let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: handler)!
+        let local  = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            self?.syncMousePassThrough(); return event
+        }!
+        mouseMonitors = [global, local]
     }
 
-    private func syncPanelMouseState() {
+    private func syncMousePassThrough() {
         let loc = NSEvent.mouseLocation
         for panel in barPanels {
-            let shouldIgnore = !panel.frame.contains(loc)
-            if panel.ignoresMouseEvents != shouldIgnore {
-                panel.ignoresMouseEvents = shouldIgnore
+            let windowPoint = panel.convertPoint(fromScreen: loc)
+            let interactive = panel.frame.contains(loc)
+                           && panel.contentView?.hitTest(windowPoint) != nil
+            if panel.ignoresMouseEvents == interactive {
+                panel.ignoresMouseEvents = !interactive
             }
         }
     }
+
 }

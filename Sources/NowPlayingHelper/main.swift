@@ -8,11 +8,15 @@ typealias GetInfoFn  = @convention(c) (DispatchQueue, AnyObject) -> Void
 let registerFn = unsafeBitCast(dlsym(h, "MRMediaRemoteRegisterForNowPlayingNotifications")!, to: RegisterFn.self)
 let getInfoFn  = unsafeBitCast(dlsym(h, "MRMediaRemoteGetNowPlayingInfo")!, to: GetInfoFn.self)
 
+private let kTitle  = "kMRMediaRemoteNowPlayingInfoTitle"
+private let kArtist = "kMRMediaRemoteNowPlayingInfoArtist"
+private let kRate   = "kMRMediaRemoteNowPlayingInfoPlaybackRate"
+
 func fetch() {
     let block: @convention(block) ([String: Any]) -> Void = { dict in
-        let title  = dict["kMRMediaRemoteNowPlayingInfoTitle"]  as? String ?? ""
-        let artist = dict["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
-        let rate   = (dict["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double) ?? 0
+        let title  = dict[kTitle]  as? String ?? ""
+        let artist = dict[kArtist] as? String ?? ""
+        let rate   = dict[kRate]   as? Double  ?? 0
         let payload: [String: Any] = ["title": title, "artist": artist, "rate": rate]
         if let data = try? JSONSerialization.data(withJSONObject: payload),
            let json = String(data: data, encoding: .utf8) {
@@ -25,12 +29,12 @@ func fetch() {
 
 registerFn(.main)
 
-let names = [
+let notificationNames = [
     "kMRMediaRemoteNowPlayingInfoDidChangeNotification",
     "kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification",
     "kMRMediaRemoteNowPlayingApplicationDidChangeNotification",
 ]
-for name in names {
+for name in notificationNames {
     NotificationCenter.default.addObserver(
         forName: NSNotification.Name(name), object: nil, queue: .main) { _ in fetch() }
 }

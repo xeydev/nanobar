@@ -13,7 +13,12 @@ final class BarPanel: NSPanel {
         let isBuiltIn = screen.localizedName.lowercased().contains("built-in")
         let rootView = BarRootView(isBuiltIn: isBuiltIn, monitorID: monitorID)
             .environmentObject(state)
-        let hosting  = NSHostingView(rootView: rootView)
+            .onPreferenceChange(InteractiveRegionKey.self) { rects in
+                Task { @MainActor in
+                    InteractiveRegionStore.shared.rects = rects
+                }
+            }
+        let hosting  = PassThroughHostingView(rootView: rootView)
 
         super.init(
             contentRect: frame,
@@ -31,7 +36,7 @@ final class BarPanel: NSPanel {
         isOpaque                  = false
         backgroundColor           = .clear
         hasShadow                 = false
-        ignoresMouseEvents        = false
+        ignoresMouseEvents        = true
         contentView               = hosting
     }
 
@@ -52,9 +57,9 @@ final class BarPanel: NSPanel {
         let sf = screen.frame
         return CGRect(
             x: sf.minX,
-            y: sf.maxY - Theme.barHeight - Theme.barMargin * 2,
+            y: sf.maxY - Theme.barContainerHeight - Theme.shadowOverflow,
             width:  sf.width,
-            height: Theme.barHeight + Theme.barMargin * 2
+            height: Theme.barContainerHeight + Theme.shadowOverflow
         )
     }
 }

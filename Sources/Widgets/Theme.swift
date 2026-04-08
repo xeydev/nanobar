@@ -18,8 +18,9 @@ public enum Theme {
     public static let batteryRed: Color    = Color(red: 1.000, green: 0.702, blue: 0.757)
 
     // MARK: - Layout
-    public static let barHeight: CGFloat = 34
+    public static let barHeight: CGFloat = 30
     public static let barMargin: CGFloat = 8
+    public static let barContainerHeight: CGFloat = 50
     public static let itemCorner: CGFloat = barHeight / 2
     public static let itemPadBg: CGFloat = 3
     public static let iconPadLeft: CGFloat = 10
@@ -30,7 +31,10 @@ public enum Theme {
     public static let itemGap: CGFloat = 4
     public static let iconSize: CGFloat = 14
     public static let appIconSize: CGFloat = 16
+    public static let nowPlayingIconSize: CGFloat = 12
     public static let labelSize: CGFloat = 12
     public static let notchWidth: CGFloat = 160
     public static let menuBarAnimDuration: Double = 0.25
+    /// Extra window height below the bar for shadow rendering; content stays pinned to top.
+    public static let shadowOverflow: CGFloat = 14
 }

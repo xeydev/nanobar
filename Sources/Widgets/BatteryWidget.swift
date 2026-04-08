@@ -25,20 +25,12 @@ public struct BatteryView: View {
         .animation(.easeInOut(duration: 0.4), value: info.isCharging)
     }
 
-    @ViewBuilder
     private var icon: some View {
         let symbolName = info.isCharging ? "battery.100.bolt" : "battery.100"
-        if #available(macOS 13, *) {
-            Image(systemName: symbolName, variableValue: Double(info.percentage) / 100.0)
-                .font(.system(size: 16))
-                .foregroundStyle(color)
-                .frame(width: 26, height: 14)
-                .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
-        } else {
-            Image(systemName: symbolName)
-                .font(.system(size: 16))
-                .foregroundStyle(color)
-                .frame(width: 26, height: 14)
-        }
+        return Image(systemName: symbolName, variableValue: Double(info.percentage) / 100.0)
+            .font(.system(size: 16))
+            .foregroundStyle(color)
+            .frame(width: 26, height: 14)
+            .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
     }
 }

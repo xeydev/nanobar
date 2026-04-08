@@ -22,22 +22,14 @@ public struct VolumeView: View {
 
     // Single Image view — identity is preserved as symbol name/value change,
     // so Magic Replace fires correctly on mute/unmute.
-    @ViewBuilder
     private var icon: some View {
-        if #available(macOS 13, *) {
-            Image(
-                systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill",
-                variableValue: Double(volume)
-            )
-            .font(.system(size: 14))
-            .foregroundStyle(Theme.volumeColor)
-            .frame(width: 20, height: 14)
-            .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
-        } else {
-            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.volumeColor)
-                .frame(width: 20, height: 14)
-        }
+        Image(
+            systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill",
+            variableValue: Double(volume)
+        )
+        .font(.system(size: 14))
+        .foregroundStyle(Theme.volumeColor)
+        .frame(width: 20, height: 14)
+        .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
     }
 }

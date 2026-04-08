@@ -16,7 +16,13 @@ public struct BarRootView: View {
     }
 
     public var body: some View {
-        if isBuiltIn { builtIn } else { external }
+        VStack(spacing: 0) {
+            Group {
+                if isBuiltIn { builtIn } else { external }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
     }
 
     // MARK: - Built-in layout (notch avoidance)
@@ -25,9 +31,7 @@ public struct BarRootView: View {
         HStack(spacing: 0) {
             HStack(spacing: Theme.itemGap) {
                 WorkspaceBarView(states: filteredStates)
-                if state.nowPlaying.title != nil {
-                    NowPlayingView(info: state.nowPlaying)
-                }
+                NowPlayingView(info: state.nowPlaying)
                 Spacer(minLength: 0)
             }
             .padding(Theme.barMargin)
@@ -36,7 +40,7 @@ public struct BarRootView: View {
 
             HStack(spacing: Theme.itemGap) {
                 Spacer(minLength: 0)
-                rightWidgetsContainer
+                rightWidgets
             }
             .padding(Theme.barMargin)
         }
@@ -46,25 +50,17 @@ public struct BarRootView: View {
 
     private var external: some View {
         ZStack {
-            if state.nowPlaying.title != nil {
-                NowPlayingView(info: state.nowPlaying)
-            }
+            NowPlayingView(info: state.nowPlaying)
             HStack(spacing: Theme.itemGap) {
                 WorkspaceBarView(states: filteredStates)
                 Spacer()
             }
             HStack(spacing: Theme.itemGap) {
                 Spacer()
-                rightWidgetsContainer
+                rightWidgets
             }
         }
         .padding(Theme.barMargin)
-    }
-
-    private var rightWidgetsContainer: some View {
-        HStack(spacing: Theme.itemGap) {
-            rightWidgets
-        }
     }
 
     // MARK: - Right-side widgets

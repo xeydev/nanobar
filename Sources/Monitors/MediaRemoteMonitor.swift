@@ -21,6 +21,7 @@ public final class MediaRemoteMonitor: @unchecked Sendable {
     }
 
     private var process: Process?
+    private var lineBuffer = ""
     private init() {}
 
     private static let helperURL: URL = {
@@ -45,8 +46,11 @@ public final class MediaRemoteMonitor: @unchecked Sendable {
             guard let self else { return }
             let data = handle.availableData
             guard !data.isEmpty,
-                  let text = String(data: data, encoding: .utf8) else { return }
-            for line in text.components(separatedBy: "\n") {
+                  let chunk = String(data: data, encoding: .utf8) else { return }
+            lineBuffer += chunk
+            let parts = lineBuffer.components(separatedBy: "\n")
+            lineBuffer = parts.last ?? ""
+            for line in parts.dropLast() {
                 self.handle(line: line)
             }
         }

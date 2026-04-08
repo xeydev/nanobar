@@ -93,7 +93,7 @@ public final class AeroSpaceMonitor: @unchecked Sendable {
                 return WorkspaceState(
                     id: wsID,
                     isFocused: focused,
-                    windows: Array(windows.prefix(8)),
+                    windows: Array(windows.prefix(5)),
                     monitorID: wsMonitor[wsID] ?? 1
                 )
             }

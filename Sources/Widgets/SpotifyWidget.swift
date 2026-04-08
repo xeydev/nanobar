@@ -12,19 +12,22 @@ public struct NowPlayingView: View {
         return t
     }
 
+    @ViewBuilder
     public var body: some View {
-        HStack(spacing: Theme.iconPadRight + Theme.labelPadLeft) {
-            Image(systemName: info.isPlaying ? "play.fill" : "pause.fill")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 12, height: 12)
-                .foregroundStyle(info.isPlaying ? Theme.spotifyActive : Theme.spotifyPaused)
-                .contentTransition(.symbolEffect(.replace))
+        if info.title != nil {
+            HStack(spacing: Theme.iconPadRight + Theme.labelPadLeft) {
+                Image(systemName: info.isPlaying ? "play.fill" : "pause.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: Theme.nowPlayingIconSize, height: Theme.nowPlayingIconSize)
+                    .foregroundStyle(info.isPlaying ? Theme.spotifyActive : Theme.spotifyPaused)
+                    .contentTransition(.symbolEffect(.replace))
 
-            MarqueeText(text: fullText, maxWidth: 180)
+                MarqueeText(text: fullText, maxWidth: 180)
+            }
+            .glassPill()
+            .animation(.default, value: info.isPlaying)
         }
-        .glassPill()
-        .animation(.default, value: info.isPlaying)
     }
 }
 
@@ -101,12 +104,10 @@ private struct MarqueeText: View {
         scrollTask = Task { @MainActor in
             while !Task.isCancelled && needsScroll {
                 let dur = Double(scrollDistance) / Double(Self.speed)
-                // pause at start, then scroll forward
                 try? await Task.sleep(for: .seconds(Self.pauseEnd))
                 guard !Task.isCancelled else { break }
                 withAnimation(.linear(duration: dur)) { animOffset = scrollDistance }
                 try? await Task.sleep(for: .seconds(dur))
-                // pause at end, then scroll back
                 try? await Task.sleep(for: .seconds(Self.pauseEnd))
                 guard !Task.isCancelled else { break }
                 withAnimation(.linear(duration: dur)) { animOffset = 0 }

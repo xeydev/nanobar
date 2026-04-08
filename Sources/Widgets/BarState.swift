@@ -10,19 +10,6 @@ public final class BarState: ObservableObject {
     @Published public var keyboardLayout = "US"
     @Published public var nowPlaying     = NowPlayingInfo(title: nil, artist: nil, isPlaying: false)
     @Published public var workspaceStates: [WorkspaceState] = []
-    @Published public var isHoveringInteractive = false
-
-    private var hoverCount = 0
-
-    public func hoverBegan() {
-        hoverCount += 1
-        isHoveringInteractive = true
-    }
-
-    public func hoverEnded() {
-        hoverCount = max(0, hoverCount - 1)
-        if hoverCount == 0 { isHoveringInteractive = false }
-    }
 
     public init() {
         ClockMonitor.shared.register      { [weak self] v in self?.clockText       = v }
