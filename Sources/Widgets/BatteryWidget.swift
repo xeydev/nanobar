@@ -13,9 +13,24 @@ public struct BatteryView: View {
         return Theme.batteryRed
     }
 
+    private var symbolName: String {
+        if info.isCharging { return "battery.100percent.bolt" }
+        switch info.percentage {
+        case ..<13:  return "battery.0percent"
+        case ..<38:  return "battery.25percent"
+        case ..<63:  return "battery.50percent"
+        case ..<88:  return "battery.75percent"
+        default:     return "battery.100percent"
+        }
+    }
+
     public var body: some View {
         HStack(spacing: Theme.iconLabelSpacing) {
-            icon
+            Image(systemName: symbolName)
+                .font(.system(size: 16))
+                .foregroundStyle(color)
+                .frame(width: 26, height: 14)
+                .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
             Text("\(info.percentage)%")
                 .font(.system(size: Theme.labelSize, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.labelColor)
@@ -23,14 +38,6 @@ public struct BatteryView: View {
         }
         .glassPill()
         .animation(.easeInOut(duration: 0.4), value: info.isCharging)
-    }
-
-    private var icon: some View {
-        let symbolName = info.isCharging ? "battery.100percent.bolt" : "battery.100percent"
-        return Image(systemName: symbolName, variableValue: Double(info.percentage) / 100.0)
-            .font(.system(size: 16))
-            .foregroundStyle(color)
-            .frame(width: 26, height: 14)
-            .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
+        .animation(.easeInOut(duration: 0.4), value: symbolName)
     }
 }
