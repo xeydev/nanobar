@@ -10,7 +10,7 @@ public final class ClockMonitor: @unchecked Sendable {
         broadcaster.register(observer)
     }
 
-    private static let formatter: DateFormatter = {
+    private var formatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEE dd MMM HH:mm"
         return f
@@ -20,9 +20,15 @@ public final class ClockMonitor: @unchecked Sendable {
 
     private init() {}
 
-    public func start() {
+    public func start(format: String = "EEE dd MMM HH:mm") {
+        formatter.dateFormat = format
         tick()
         scheduleTimer()
+    }
+
+    public func stop() {
+        timer?.cancel()
+        timer = nil
     }
 
     private func scheduleTimer() {
@@ -36,7 +42,7 @@ public final class ClockMonitor: @unchecked Sendable {
     }
 
     private func tick() {
-        let text = ClockMonitor.formatter.string(from: Date())
+        let text = formatter.string(from: Date())
         broadcaster.notify(text)
     }
 }

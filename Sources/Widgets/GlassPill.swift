@@ -32,15 +32,24 @@ private struct GlassPillModifier: ViewModifier {
     let focused: Bool
     let hovered: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.pillStyle) private var pillStyle
 
     func body(content: Content) -> some View {
+        let radius = pillStyle.cornerRadius
         content
             .padding(.leading,  Theme.iconPadLeft)
             .padding(.trailing, Theme.labelPadRight)
             .frame(height: Theme.barHeight)
-            .background(glass)
-            .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 3)
-            .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+            .background(glass(radius: radius))
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .shadow(
+                color: pillStyle.shadow ? .black.opacity(0.25) : .clear,
+                radius: 6, x: 0, y: 3
+            )
+            .shadow(
+                color: pillStyle.shadow ? .black.opacity(0.12) : .clear,
+                radius: 2, x: 0, y: 1
+            )
     }
 
     private var whiteOverlayOpacity: Double {
@@ -48,20 +57,36 @@ private struct GlassPillModifier: ViewModifier {
         return colorScheme == .dark ? (hovered ? 0.12 : 0.07) : (hovered ? 0.42 : 0.35)
     }
 
-    private var glass: some View {
+    @ViewBuilder
+    private func glass(radius: CGFloat) -> some View {
         let isDark = colorScheme == .dark
-        return ZStack {
-            Capsule(style: .continuous)
-                .fill(.regularMaterial)
-            Capsule(style: .continuous)
+        ZStack {
+            switch pillStyle.material {
+            case .regularMaterial:
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.regularMaterial)
+            case .thinMaterial:
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.thinMaterial)
+            case .ultraThinMaterial:
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.ultraThinMaterial)
+            case .solid:
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(Color.black.opacity(isDark ? 0.6 : 0.08))
+            case .none:
+                EmptyView()
+            }
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .fill(Color.white.opacity(whiteOverlayOpacity))
-            Capsule(style: .continuous)
-                .fill(LinearGradient(
-                    colors: [.white.opacity(focused ? 0.28 : (isDark ? 0.16 : 0.25)), .clear],
-                    startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)
-                ))
-            Capsule(style: .continuous)
-                .strokeBorder(Color.white.opacity(isDark ? 0.28 : 0.50), lineWidth: 0.75)
+            if pillStyle.specular {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [.white.opacity(focused ? 0.28 : (isDark ? 0.16 : 0.25)), .clear],
+                        startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)
+                    ))
+            }
+            if pillStyle.border {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(isDark ? 0.28 : 0.50), lineWidth: 0.75)
+            }
         }
     }
 }

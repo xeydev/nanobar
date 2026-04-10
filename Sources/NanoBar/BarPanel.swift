@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Widgets
+import Monitors
 
 @MainActor
 final class BarPanel: NSPanel {
@@ -13,6 +14,7 @@ final class BarPanel: NSPanel {
         let isBuiltIn = screen.localizedName.lowercased().contains("built-in")
         let rootView = BarRootView(isBuiltIn: isBuiltIn, monitorID: monitorID)
             .environmentObject(state)
+            .environmentObject(ConfigLoader.shared)
             .onPreferenceChange(InteractiveRegionKey.self) { rects in
                 Task { @MainActor in
                     InteractiveRegionStore.shared.rects = rects

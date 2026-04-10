@@ -9,31 +9,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
     private let barState = BarState()
     private var mouseMonitors: [Any] = []
+    private var monitorsStarted = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        setupBars()
+        ConfigLoader.shared.loadOrCreate()
+        ConfigLoader.shared.onReload = { [weak self] in self?.reinit() }
+        reinit()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
-        ClockMonitor.shared.start()
-        BatteryMonitor.shared.start()
-        VolumeMonitor.shared.start()
-        KeyboardMonitor.shared.start()
-        MediaRemoteMonitor.shared.start()
-        AeroSpaceMonitor.shared.start()
-
         installMenuBarCarbonHandler()
         installMouseMonitors()
     }
 
-    private func setupBars() {
+    // MARK: - Reinit
+
+    /// Called on first launch and on every successful config reload.
+    /// Tears down panels and widget registry, then rebuilds everything from current config.
+    private func reinit() {
+        // 1. Close panels
         barPanels.forEach { $0.close() }
         barPanels.removeAll()
 
+        // 2. Stop clock so it can restart with a potentially new format
+        ClockMonitor.shared.stop()
+
+        // 3. Rebuild widget registry
+        let config = ConfigLoader.shared.config
+        WidgetRegistry.shared.clear()
+        WidgetRegistry.shared.registerBuiltIns(config: config)
+        PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
+
+        // 4. Recreate panels
+        setupBars()
+
+        // 5. Start/restart monitors
+        let clockFormat = config.plugins["clock"]?["format"] ?? "EEE dd MMM HH:mm"
+        ClockMonitor.shared.start(format: clockFormat)
+
+        if !monitorsStarted {
+            monitorsStarted = true
+            BatteryMonitor.shared.start()
+            VolumeMonitor.shared.start()
+            KeyboardMonitor.shared.start()
+            MediaRemoteMonitor.shared.start()
+            AeroSpaceMonitor.shared.start()
+        }
+    }
+
+    // MARK: - Bar setup
+
+    private func setupBars() {
         for (index, screen) in NSScreen.screens.enumerated() {
             let panel = BarPanel(screen: screen, monitorID: index + 1, state: barState)
             panel.orderFront(nil)
@@ -42,6 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func screensChanged() {
+        barPanels.forEach { $0.close() }
+        barPanels.removeAll()
         setupBars()
     }
 

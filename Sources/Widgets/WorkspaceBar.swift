@@ -1,12 +1,11 @@
 import AeroSpaceClient
 import AppKit
 import SwiftUI
+import Monitors
 
-// ─── Change this line to switch workspace layout mode ───────────────────────
-let workspaceMode: WorkspaceMode = .clampAndExpand
-// ────────────────────────────────────────────────────────────────────────────
+// MARK: - WorkspaceMode
 
-enum WorkspaceMode {
+public enum WorkspaceMode: String {
     /// Option 1 — flat label strip; no app icons shown
     case labelsOnly
     /// Option 2 — only the focused workspace shows app icons; others are label-only
@@ -19,22 +18,31 @@ enum WorkspaceMode {
 // MARK: - Root
 
 public struct WorkspaceBarView: View {
-    let states: [WorkspaceState]
-    /// Shared hover tracking used by Option 3 (ignored by other modes)
+    @EnvironmentObject private var state: BarState
+    @Environment(\.monitorID) private var monitorID
+
+    private let mode: WorkspaceMode
+
     @State private var hoveredID: String?
 
-    public init(states: [WorkspaceState]) { self.states = states }
+    public init(config: [String: String]) {
+        mode = WorkspaceMode(rawValue: config["mode"] ?? "") ?? .clampAndExpand
+    }
+
+    private var filteredStates: [WorkspaceState] {
+        state.workspaceStates.filter { $0.monitorID == monitorID }
+    }
 
     public var body: some View {
         HStack(spacing: Theme.itemGap) {
-            ForEach(states, id: \.id) { state in
-                switch workspaceMode {
+            ForEach(filteredStates, id: \.id) { ws in
+                switch mode {
                 case .labelsOnly:
-                    LabelOnlyPill(state: state)
+                    LabelOnlyPill(state: ws)
                 case .activeIcons:
-                    ActiveIconsPill(state: state)
+                    ActiveIconsPill(state: ws)
                 case .clampAndExpand:
-                    ClampExpandPill(state: state, hoveredID: $hoveredID)
+                    ClampExpandPill(state: ws, hoveredID: $hoveredID)
                 }
             }
         }

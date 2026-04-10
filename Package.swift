@@ -4,6 +4,9 @@ import PackageDescription
 let package = Package(
     name: "NanoBar",
     platforms: [.macOS(.v15)],
+    dependencies: [
+        .package(url: "https://github.com/LebJe/TOMLKit", from: "0.5.0"),
+    ],
     targets: [
         .executableTarget(
             name: "NowPlayingHelper",
@@ -12,20 +15,26 @@ let package = Package(
         ),
         .executableTarget(
             name: "NanoBar",
-            dependencies: ["Widgets", "Monitors", "AeroSpaceClient"],
+            dependencies: ["Widgets", "Monitors", "AeroSpaceClient", "NanoBarKit"],
             path: "Sources/NanoBar",
-swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "Widgets",
-            dependencies: ["AeroSpaceClient", "Monitors"],
+            dependencies: ["AeroSpaceClient", "Monitors", "NanoBarKit"],
             path: "Sources/Widgets",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "Monitors",
-            dependencies: ["AeroSpaceClient"],
+            dependencies: ["AeroSpaceClient", .product(name: "TOMLKit", package: "TOMLKit")],
             path: "Sources/Monitors",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "NanoBarKit",
+            dependencies: [],
+            path: "Sources/NanoBarKit",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(

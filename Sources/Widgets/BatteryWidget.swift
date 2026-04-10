@@ -2,15 +2,24 @@ import Monitors
 import SwiftUI
 
 public struct BatteryView: View {
-    let info: BatteryInfo
+    @EnvironmentObject private var state: BarState
+    let config: [String: String]
 
-    public init(info: BatteryInfo) { self.info = info }
+    public init(config: [String: String]) { self.config = config }
+
+    private var info: BatteryInfo { state.battery }
 
     private var color: Color {
-        if info.isCharging || info.percentage > 75 { return Theme.batteryGreen }
-        if info.percentage > 50 { return Theme.batteryYellow }
-        if info.percentage > 25 { return Theme.batteryOrange }
-        return Theme.batteryRed
+        if info.isCharging || info.percentage > 75 {
+            return Theme.color(hex: config["color"])     ?? Theme.batteryGreen
+        }
+        if info.percentage > 50 {
+            return Theme.color(hex: config["warnColor"]) ?? Theme.batteryYellow
+        }
+        if info.percentage > 25 {
+            return Theme.color(hex: config["medColor"])  ?? Theme.batteryOrange
+        }
+        return     Theme.color(hex: config["lowColor"])  ?? Theme.batteryRed
     }
 
     private var symbolName: String {
@@ -34,6 +43,7 @@ public struct BatteryView: View {
             Text("\(info.percentage)%")
                 .font(.system(size: Theme.labelSize, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.labelColor)
+                .lineLimit(1)
                 .stableMinWidth()
         }
         .glassPill()

@@ -2,9 +2,16 @@ import SwiftUI
 import Monitors
 
 public struct NowPlayingView: View {
-    let info: NowPlayingInfo
+    @EnvironmentObject private var state: BarState
+    let config: [String: String]
 
-    public init(info: NowPlayingInfo) { self.info = info }
+    public init(config: [String: String]) { self.config = config }
+
+    private var info: NowPlayingInfo { state.nowPlaying }
+
+    private var activeColor: Color {
+        Theme.color(hex: config["activeColor"]) ?? Theme.spotifyActive
+    }
 
     private var fullText: String {
         var t = info.title ?? ""
@@ -20,7 +27,7 @@ public struct NowPlayingView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: Theme.nowPlayingIconSize, height: Theme.nowPlayingIconSize)
-                    .foregroundStyle(info.isPlaying ? Theme.spotifyActive : Theme.spotifyPaused)
+                    .foregroundStyle(info.isPlaying ? activeColor : Theme.spotifyPaused)
                     .contentTransition(.symbolEffect(.replace))
 
                 MarqueeText(text: fullText, maxWidth: 180)

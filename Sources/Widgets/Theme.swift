@@ -37,4 +37,16 @@ public enum Theme {
     public static let menuBarAnimDuration: Double = 0.25
     /// Extra window height below the bar for shadow rendering; content stays pinned to top.
     public static let shadowOverflow: CGFloat = 14
+
+    // MARK: - Config helpers
+
+    public static func color(hex: String?) -> Color? {
+        guard let hex, hex.hasPrefix("#"), hex.count == 7 else { return nil }
+        let h = String(hex.dropFirst())
+        guard let value = UInt64(h, radix: 16) else { return nil }
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >>  8) & 0xFF) / 255
+        let b = Double( value        & 0xFF) / 255
+        return Color(red: r, green: g, blue: b)
+    }
 }
