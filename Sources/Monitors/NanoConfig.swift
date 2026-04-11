@@ -220,6 +220,8 @@ public enum BorderConfig: Decodable, Sendable {
     case auto                                  // border = true
     case custom(width: Double, color: String)  // border = { ... }
 
+    public static let defaultColor = "#FFFFFF59"
+
     public var isEnabled: Bool   { if case .disabled = self { return false }; return true }
     public var isAuto: Bool      { if case .auto     = self { return true  }; return false }
     public var width: Double     { if case .custom(let w, _) = self { return w }; return 0.75 }
@@ -233,7 +235,7 @@ public enum BorderConfig: Decodable, Sendable {
         }
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let width = try c.decodeDoubleOrInt(forKey: .width) ?? 0.75
-        let color = try c.decodeIfPresent(String.self, forKey: .color) ?? "#FFFFFF59"
+        let color = try c.decodeIfPresent(String.self, forKey: .color) ?? BorderConfig.defaultColor
         self = .custom(width: width, color: color)
     }
 }

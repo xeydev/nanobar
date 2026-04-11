@@ -77,11 +77,9 @@ public struct BarStyle: Sendable {
         shadow       = config.shadow
         border       = config.border.isEnabled
         borderWidth  = CGFloat(config.border.width)
-        borderColor  = Theme.color(hex: config.border.customColor ?? "#FFFFFF59") ?? Color.white.opacity(0.35)
-        margin  = EdgeInsets(top: CGFloat(config.margin.top),   leading: CGFloat(config.margin.left),
-                             bottom: CGFloat(config.margin.bottom), trailing: CGFloat(config.margin.right))
-        padding = EdgeInsets(top: CGFloat(config.padding.top),  leading: CGFloat(config.padding.left),
-                             bottom: CGFloat(config.padding.bottom), trailing: CGFloat(config.padding.right))
+        borderColor  = Theme.color(hex: config.border.customColor ?? BorderConfig.defaultColor) ?? Color.white.opacity(0.35)
+        margin  = config.margin.asEdgeInsets
+        padding = config.padding.asEdgeInsets
         let raw = config.background.trimmingCharacters(in: .whitespaces)
         if raw == "blur" {
             background = .blur
@@ -113,6 +111,13 @@ public struct BarStyle: Sendable {
             let a = Double( value        & 0xFF) / 255
             return .color(r, g, b, a)
         }
+    }
+}
+
+private extension SideInsets {
+    var asEdgeInsets: EdgeInsets {
+        EdgeInsets(top: CGFloat(top), leading: CGFloat(left),
+                   bottom: CGFloat(bottom), trailing: CGFloat(right))
     }
 }
 
