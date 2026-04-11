@@ -84,8 +84,9 @@ private struct GlassPillModifier: ViewModifier {
                     ))
             }
             if pillStyle.border {
+                let borderColor = pillStyle.borderColor ?? Color.white.opacity(isDark ? 0.28 : 0.50)
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(isDark ? 0.28 : 0.50), lineWidth: 0.75)
+                    .strokeBorder(borderColor, lineWidth: pillStyle.borderWidth)
             }
         }
     }

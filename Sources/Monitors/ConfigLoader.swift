@@ -44,7 +44,8 @@ public final class ConfigLoader: ObservableObject, Sendable {
             .appendingPathComponent(".config/nanobar/config.toml")
     }()
 
-    private var watchSource: DispatchSourceFileSystemObject?
+    private var dirWatchSource:  DispatchSourceFileSystemObject?
+    private var fileWatchSource: DispatchSourceFileSystemObject?
     private var lastNotifiedError: String?
 
     private init() {}
@@ -94,17 +95,41 @@ public final class ConfigLoader: ObservableObject, Sendable {
     // MARK: - File watching
 
     private func watch() {
-        let fd = open(configURL.deletingLastPathComponent().path, O_EVTONLY)
-        guard fd >= 0 else { return }
+        // Watch the directory for write events (catches atomic saves: temp-file + rename).
+        let dirFd = open(configURL.deletingLastPathComponent().path, O_EVTONLY)
+        if dirFd >= 0 {
+            let src = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: dirFd, eventMask: .write, queue: .main)
+            src.setEventHandler { [weak self] in self?.reload() }
+            src.setCancelHandler { close(dirFd) }
+            src.resume()
+            dirWatchSource = src
+        }
+
+        // Also watch the file directly for write events (catches in-place saves).
+        // After an atomic rename the fd becomes stale, but the dir watcher still fires
+        // for subsequent atomic saves, so this only needs to cover in-place writes.
+        watchFile()
+    }
+
+    private func watchFile() {
+        let fileFd = open(configURL.path, O_EVTONLY)
+        guard fileFd >= 0 else { return }
         let src = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: .write,
-            queue: .main
-        )
-        src.setEventHandler { [weak self] in self?.reload() }
-        src.setCancelHandler { close(fd) }
+            fileDescriptor: fileFd, eventMask: [.write, .rename, .delete], queue: .main)
+        src.setEventHandler { [weak self, weak src] in
+            guard let self else { return }
+            self.reload()
+            // File was replaced atomically (rename/delete) — re-attach to the new inode.
+            if let data = src?.data, !data.intersection([.rename, .delete]).isEmpty {
+                self.fileWatchSource?.cancel()
+                self.fileWatchSource = nil
+                self.watchFile()
+            }
+        }
+        src.setCancelHandler { close(fileFd) }
         src.resume()
-        watchSource = src
+        fileWatchSource = src
     }
 
     // MARK: - Notifications

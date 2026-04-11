@@ -8,6 +8,8 @@ import Monitors
 public struct PillStyle: Sendable {
     public let shadow:       Bool
     public let border:       Bool
+    public let borderWidth:  CGFloat
+    public let borderColor:  Color?   // nil = adaptive (dark/light)
     public let specular:     Bool
     public let cornerRadius: CGFloat
     public let material:     PillMaterial
@@ -22,7 +24,9 @@ public struct PillStyle: Sendable {
 
     public init(_ config: NanoConfig.PillConfig) {
         shadow       = config.shadow
-        border       = config.border
+        border       = config.border.isEnabled
+        borderWidth  = CGFloat(config.border.width)
+        borderColor  = config.border.customColor.flatMap { Theme.color(hex: $0) }
         specular     = config.specular
         cornerRadius = CGFloat(config.cornerRadius)
         material = switch config.material {
@@ -57,11 +61,27 @@ public struct BarStyle: Sendable {
         case blur
         case color(Double, Double, Double, Double)  // r, g, b, a  (0–1)
     }
-    public let background: Background
-    public let height: CGFloat
+    public let background:   Background
+    public let height:       CGFloat
+    public let cornerRadius: CGFloat
+    public let shadow:       Bool
+    public let margin:       EdgeInsets   // screen edge → bar background
+    public let padding:      EdgeInsets   // bar background → pill widgets
+    public let border:       Bool
+    public let borderWidth:  CGFloat
+    public let borderColor:  Color
 
     public init(_ config: NanoConfig.BarConfig) {
-        height = CGFloat(config.height)
+        height       = CGFloat(config.height)
+        cornerRadius = CGFloat(config.cornerRadius)
+        shadow       = config.shadow
+        border       = config.border.isEnabled
+        borderWidth  = CGFloat(config.border.width)
+        borderColor  = Theme.color(hex: config.border.customColor ?? "#FFFFFF59") ?? Color.white.opacity(0.35)
+        margin  = EdgeInsets(top: CGFloat(config.margin.top),   leading: CGFloat(config.margin.left),
+                             bottom: CGFloat(config.margin.bottom), trailing: CGFloat(config.margin.right))
+        padding = EdgeInsets(top: CGFloat(config.padding.top),  leading: CGFloat(config.padding.left),
+                             bottom: CGFloat(config.padding.bottom), trailing: CGFloat(config.padding.right))
         let raw = config.background.trimmingCharacters(in: .whitespaces)
         if raw == "blur" {
             background = .blur

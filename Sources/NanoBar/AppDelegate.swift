@@ -31,25 +31,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Called on first launch and on every successful config reload.
     /// Tears down panels and widget registry, then rebuilds everything from current config.
     private func reinit() {
-        // 1. Close panels
         barPanels.forEach { $0.close() }
         barPanels.removeAll()
 
-        // 2. Stop clock so it can restart with a potentially new format
+        // Stop so it restarts with a potentially new format
         ClockMonitor.shared.stop()
 
-        // 3. Rebuild widget registry
         let config = ConfigLoader.shared.config
         WidgetRegistry.shared.clear()
         WidgetRegistry.shared.registerBuiltIns(config: config)
         PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
 
-        // 4. Recreate panels
         setupBars()
 
-        // 5. Start/restart monitors
-        let clockFormat = config.plugins["clock"]?["format"] ?? "EEE dd MMM HH:mm"
-        ClockMonitor.shared.start(format: clockFormat)
+        ClockMonitor.shared.start(format: config.plugins["clock"]?.settings["format"] ?? "EEE dd MMM HH:mm")
 
         if !monitorsStarted {
             monitorsStarted = true

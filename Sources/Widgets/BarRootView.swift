@@ -20,17 +20,37 @@ public struct BarRootView: View {
         self.monitorID = monitorID
     }
 
+    private var cfg: NanoConfig { config.config }
+    private var bar: BarStyle    { BarStyle(cfg.bar) }
+
     public var body: some View {
         VStack(spacing: 0) {
             Group {
                 if isBuiltIn { builtIn } else { external }
             }
             .fixedSize(horizontal: false, vertical: true)
+            .background(barBackground)   // 1. background behind padded content
+            .padding(bar.margin)         // 2. external margin outside background
             .environment(\.monitorID, monitorID)
-            .environment(\.pillStyle, PillStyle(config.config.pill))
-            .environment(\.barStyle, BarStyle(config.config.bar))
+            .environment(\.pillStyle, PillStyle(cfg.pill))
+            .environment(\.barStyle, bar)
             Spacer(minLength: 0)
         }
+    }
+
+    @ViewBuilder private var barBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: bar.cornerRadius, style: .continuous)
+        ZStack {
+            switch bar.background {
+            case .none:                  Color.clear
+            case .blur:                  shape.fill(.regularMaterial)
+            case let .color(r, g, b, a): shape.fill(Color(red: r, green: g, blue: b, opacity: a))
+            }
+            if bar.border {
+                shape.strokeBorder(bar.borderColor, lineWidth: bar.borderWidth)
+            }
+        }
+        .shadow(color: bar.shadow ? .black.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Widget dispatch
@@ -62,13 +82,13 @@ public struct BarRootView: View {
         HStack(spacing: 0) {
             // Left half: left-zone widgets, and center-zone as fallback if they don't fit right
             HStack(spacing: Theme.itemGap) {
-                zoneWidgets(config.config.widgets.left)
+                zoneWidgets(cfg.widgets.left)
                 Spacer(minLength: 0)
                 if !nowPlayingFitsRight {
-                    zoneWidgets(config.config.widgets.center)
+                    zoneWidgets(cfg.widgets.center)
                 }
             }
-            .padding(Theme.barMargin)
+            .padding(bar.padding)
 
             Spacer().frame(width: Theme.notchWidth)
 
@@ -78,19 +98,19 @@ public struct BarRootView: View {
                 ViewThatFits(in: .horizontal) {
                     // Preferred: center + right widgets
                     HStack(spacing: Theme.itemGap) {
-                        zoneWidgets(config.config.widgets.center)
-                        zoneWidgets(config.config.widgets.right)
+                        zoneWidgets(cfg.widgets.center)
+                        zoneWidgets(cfg.widgets.right)
                     }
                     .preference(key: NowPlayingFitsRightKey.self, value: true)
 
                     // Fallback: right widgets only; center moves to left half
                     HStack(spacing: Theme.itemGap) {
-                        zoneWidgets(config.config.widgets.right)
+                        zoneWidgets(cfg.widgets.right)
                     }
                     .preference(key: NowPlayingFitsRightKey.self, value: false)
                 }
             }
-            .padding(Theme.barMargin)
+            .padding(bar.padding)
             .onPreferenceChange(NowPlayingFitsRightKey.self) { nowPlayingFitsRight = $0 }
         }
     }
@@ -99,16 +119,16 @@ public struct BarRootView: View {
 
     private var external: some View {
         ZStack {
-            zoneWidgets(config.config.widgets.center)
+            zoneWidgets(cfg.widgets.center)
             HStack(spacing: Theme.itemGap) {
-                zoneWidgets(config.config.widgets.left)
+                zoneWidgets(cfg.widgets.left)
                 Spacer()
             }
             HStack(spacing: Theme.itemGap) {
                 Spacer()
-                zoneWidgets(config.config.widgets.right)
+                zoneWidgets(cfg.widgets.right)
             }
         }
-        .padding(Theme.barMargin)
+        .padding(bar.padding)
     }
 }

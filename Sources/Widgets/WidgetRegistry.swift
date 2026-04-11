@@ -29,13 +29,25 @@ public final class WidgetRegistry {
     /// Registers all built-in widgets using the same API as external plugins.
     /// Each built-in receives its config slice from `[plugins.<id>]`.
     public func registerBuiltIns(config: NanoConfig) {
-        func cfg(_ id: String) -> [String: String] { config.plugins[id] ?? [:] }
-        register(id: "clock")       { AnyView(ClockView(config: cfg("clock"))) }
-        register(id: "battery")     { AnyView(BatteryView(config: cfg("battery"))) }
-        register(id: "volume")      { AnyView(VolumeView(config: cfg("volume"))) }
-        register(id: "keyboard")    { AnyView(KeyboardView(config: cfg("keyboard"))) }
-        register(id: "now_playing") { AnyView(NowPlayingView(config: cfg("now_playing"))) }
-        register(id: "workspaces")  { AnyView(WorkspaceBarView(config: cfg("workspaces"))) }
+        func settings(_ id: String) -> [String: String] { config.plugins[id]?.settings ?? [:] }
+
+        func reg<V: View>(id: String, _ make: @escaping @MainActor () -> V) {
+            let pill = config.plugins[id]?.pill
+            self.register(id: id) {
+                if let pill {
+                    AnyView(make().environment(\.pillStyle, PillStyle(pill)))
+                } else {
+                    AnyView(make())
+                }
+            }
+        }
+
+        reg(id: "clock")       { ClockView(config: settings("clock")) }
+        reg(id: "battery")     { BatteryView(config: settings("battery")) }
+        reg(id: "volume")      { VolumeView(config: settings("volume")) }
+        reg(id: "keyboard")    { KeyboardView(config: settings("keyboard")) }
+        reg(id: "now_playing") { NowPlayingView(config: settings("now_playing")) }
+        reg(id: "workspaces")  { WorkspaceBarView(config: settings("workspaces")) }
     }
 }
 

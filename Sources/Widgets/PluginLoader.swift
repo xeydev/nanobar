@@ -9,14 +9,13 @@ import NanoBarKit
 @MainActor
 public final class PluginLoader {
     public static let shared = PluginLoader()
+    private var loadedBundlePaths: Set<String> = []
     private init() {}
 
     public func loadPlugins(config: NanoConfig, registry: WidgetRegistry) {
-        for (id, pluginConfig) in config.plugins {
-            guard let bundlePath = pluginConfig["bundle"] else {
-                // No bundle key → built-in, already registered
-                continue
-            }
+        for (_, pluginEntry) in config.plugins {
+            guard let bundlePath = pluginEntry.bundle else { continue }
+            guard !loadedBundlePaths.contains(bundlePath) else { continue }
             guard let bundle = Bundle(path: bundlePath), bundle.load() else {
                 ConfigLoader.shared.report(.bundleNotFound(path: bundlePath))
                 continue
@@ -28,10 +27,8 @@ public final class PluginLoader {
                 ConfigLoader.shared.report(.invalidPrincipalClass(path: bundlePath))
                 continue
             }
-            let userConfig = pluginConfig.filter { $0.key != "bundle" }
-            let bridge = RegistryBridge(inner: registry)
-            entry.registerWidgets(with: bridge, config: userConfig)
-            _ = id  // used for error context above; suppress unused warning
+            entry.registerWidgets(with: RegistryBridge(inner: registry), config: pluginEntry.settings)
+            loadedBundlePaths.insert(bundlePath)
         }
     }
 }
