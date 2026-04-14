@@ -1,6 +1,6 @@
 import Foundation
 import Monitors
-import NanoBarKit
+import NanoBarPluginAPI
 
 // MARK: - PluginLoader
 

@@ -1,54 +1,30 @@
 import SwiftUI
 import Monitors
+// NanoBarPluginAPI re-exported via GlassPill.swift
 
-// MARK: - PillStyle
+// MARK: - PillStyle (NanoConfig initialiser)
 
-/// Global pill appearance derived from the [pill] config section.
-/// Injected via @Environment(\.pillStyle) so all widgets pick it up automatically.
-public struct PillStyle: Sendable {
-    public let shadow:       Bool
-    public let border:       Bool
-    public let borderWidth:  CGFloat
-    public let borderColor:  Color?   // nil = adaptive (dark/light)
-    public let specular:     Bool
-    public let cornerRadius: CGFloat
-    public let material:     PillMaterial
-
-    public enum PillMaterial: Sendable {
-        case regularMaterial
-        case thinMaterial
-        case ultraThinMaterial
-        case solid
-        case none
-    }
-
-    public init(_ config: NanoConfig.PillConfig) {
-        shadow       = config.shadow
-        border       = config.border.isEnabled
-        borderWidth  = CGFloat(config.border.width)
-        borderColor  = config.border.customColor.flatMap { Theme.color(hex: $0) }
-        specular     = config.specular
-        cornerRadius = CGFloat(config.cornerRadius)
-        material = switch config.material {
-        case "thin":      .thinMaterial
-        case "ultraThin": .ultraThinMaterial
-        case "solid":     .solid
-        case "none":      .none
-        default:          .regularMaterial   // "glass" or anything unrecognized
-        }
-    }
-
-    public static let `default` = PillStyle(NanoConfig.PillConfig())
-}
-
-private struct PillStyleKey: EnvironmentKey {
-    static let defaultValue = PillStyle.default
-}
-
-public extension EnvironmentValues {
-    var pillStyle: PillStyle {
-        get { self[PillStyleKey.self] }
-        set { self[PillStyleKey.self] = newValue }
+// PillStyle itself lives in NanoBarPluginAPI so plugins can use it.
+// This extension adds the NanoConfig-backed initialiser used by the host only.
+extension PillStyle {
+    init(_ config: NanoConfig.PillConfig) {
+        self.init(
+            shadow:       config.shadow,
+            border:       config.border.isEnabled,
+            borderWidth:  CGFloat(config.border.width),
+            borderColor:  config.border.customColor.flatMap { Theme.color(hex: $0) },
+            specular:     config.specular,
+            cornerRadius: CGFloat(config.cornerRadius),
+            material: {
+                switch config.material {
+                case "thin":      return .thinMaterial
+                case "ultraThin": return .ultraThinMaterial
+                case "solid":     return .solid
+                case "none":      return .none
+                default:          return .regularMaterial
+                }
+            }()
+        )
     }
 }
 

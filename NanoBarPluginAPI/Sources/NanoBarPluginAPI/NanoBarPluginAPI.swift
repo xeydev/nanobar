@@ -9,11 +9,15 @@ public let NanoBarKitVersion: Int = 1
 /// Set `NSPrincipalClass` in the bundle's Info.plist to the fully-qualified class name.
 /// Uses Objective-C ABI for stability across Swift versions.
 @objc public protocol NanoBarPluginEntry: NSObjectProtocol {
-    /// Called once when the bundle is loaded. Register your widgets using the registry.
+    /// Matches the `[plugins.<pluginID>]` TOML section key, e.g. `"battery"`.
+    /// Used by the host to look up config before calling `registerWidgets`.
+    @objc var pluginID: String { get }
+
+    /// Called on every config load/reload. Register (or re-register) your widgets.
     /// - Parameters:
     ///   - registry: The registry to register widget factories with.
-    ///   - config: All key-value pairs from the `[plugins.yourID]` TOML section, excluding `bundle`.
-    @objc func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String])
+    ///   - config: All key-value pairs from the `[plugins.<pluginID>]` TOML section.
+    @MainActor @objc func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String])
 }
 
 // MARK: - Registry
@@ -22,7 +26,7 @@ public let NanoBarKitVersion: Int = 1
 @objc public protocol NanoBarWidgetRegistry: NSObjectProtocol {
     /// Register a widget factory. The factory's `widgetID` must match the `[plugins.<id>]`
     /// section name used in `config.toml`.
-    @objc func register(_ factory: any NanoBarWidgetFactory)
+    @MainActor @objc func register(_ factory: any NanoBarWidgetFactory)
 }
 
 // MARK: - Widget factory
@@ -34,7 +38,7 @@ public let NanoBarKitVersion: Int = 1
 
     /// Called once on the main thread when the widget is first needed.
     /// Return your SwiftUI view wrapped in a `NanoBarViewBox`.
-    @objc func makeViewBox() -> NanoBarViewBox
+    @MainActor @objc func makeViewBox() -> NanoBarViewBox
 }
 
 // MARK: - View box

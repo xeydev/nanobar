@@ -1,6 +1,6 @@
 import SwiftUI
 import Monitors
-import NanoBarKit
+import NanoBarPluginAPI
 
 // MARK: - WidgetRegistry
 
@@ -55,17 +55,13 @@ public final class WidgetRegistry {
 
 /// Bridges the @objc NanoBarWidgetRegistry protocol (used by external plugins)
 /// to the Swift WidgetRegistry.
-/// Always called from the main thread (PluginLoader is @MainActor), so
-/// MainActor.assumeIsolated is safe here.
 final class RegistryBridge: NSObject, NanoBarWidgetRegistry, @unchecked Sendable {
     private let inner: WidgetRegistry
     init(inner: WidgetRegistry) { self.inner = inner }
 
-    func register(_ factory: any NanoBarWidgetFactory) {
+    @MainActor func register(_ factory: any NanoBarWidgetFactory) {
         let id = factory.widgetID
         let box = factory.makeViewBox()
-        MainActor.assumeIsolated {
-            inner.register(id: id) { box.view }
-        }
+        inner.register(id: id) { box.view }
     }
 }
