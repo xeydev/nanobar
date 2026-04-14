@@ -1,5 +1,4 @@
 import SwiftUI
-import Monitors
 import NanoBarPluginAPI
 
 // MARK: - WidgetRegistry
@@ -23,32 +22,6 @@ public final class WidgetRegistry {
     public func clear() {
         factories.removeAll()
     }
-
-    // MARK: Built-in registration
-
-    /// Registers all built-in widgets using the same API as external plugins.
-    /// Each built-in receives its config slice from `[plugins.<id>]`.
-    public func registerBuiltIns(config: NanoConfig) {
-        func settings(_ id: String) -> [String: String] { config.plugins[id]?.settings ?? [:] }
-
-        func reg<V: View>(id: String, _ make: @escaping @MainActor () -> V) {
-            let pill = config.plugins[id]?.pill
-            self.register(id: id) {
-                if let pill {
-                    AnyView(make().environment(\.pillStyle, PillStyle(pill)))
-                } else {
-                    AnyView(make())
-                }
-            }
-        }
-
-        reg(id: "clock")       { ClockView(config: settings("clock")) }
-        reg(id: "battery")     { BatteryView(config: settings("battery")) }
-        reg(id: "volume")      { VolumeView(config: settings("volume")) }
-        reg(id: "keyboard")    { KeyboardView(config: settings("keyboard")) }
-        reg(id: "now_playing") { NowPlayingView(config: settings("now_playing")) }
-        reg(id: "workspaces")  { WorkspaceBarView(config: settings("workspaces")) }
-    }
 }
 
 // MARK: - RegistryBridge
@@ -60,7 +33,7 @@ final class RegistryBridge: NSObject, NanoBarWidgetRegistry, @unchecked Sendable
     init(inner: WidgetRegistry) { self.inner = inner }
 
     @MainActor func register(_ factory: any NanoBarWidgetFactory) {
-        let id = factory.widgetID
+        let id  = factory.widgetID
         let box = factory.makeViewBox()
         inner.register(id: id) { box.view }
     }

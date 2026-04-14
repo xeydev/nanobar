@@ -1,19 +1,17 @@
-import AeroSpaceClient
 import SwiftUI
 import Monitors
 
-// Reports whether NowPlayingView fits on the right side of the built-in bar.
-private struct NowPlayingFitsRightKey: PreferenceKey {
+// Reports whether center widgets fit on the right side of the built-in bar.
+private struct CenterFitsRightKey: PreferenceKey {
     static let defaultValue = true
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = nextValue() }
 }
 
 public struct BarRootView: View {
-    @EnvironmentObject private var state: BarState
     @EnvironmentObject private var config: ConfigLoader
     let isBuiltIn: Bool
     let monitorID: Int
-    @State private var nowPlayingFitsRight = true
+    @State private var centerFitsRight = true
 
     public init(isBuiltIn: Bool, monitorID: Int) {
         self.isBuiltIn = isBuiltIn
@@ -29,8 +27,8 @@ public struct BarRootView: View {
                 if isBuiltIn { builtIn } else { external }
             }
             .fixedSize(horizontal: false, vertical: true)
-            .background(barBackground)   // 1. background behind padded content
-            .padding(bar.margin)         // 2. external margin outside background
+            .background(barBackground)
+            .padding(bar.margin)
             .environment(\.monitorID, monitorID)
             .environment(\.pillStyle, PillStyle(cfg.pill))
             .environment(\.barStyle, bar)
@@ -60,7 +58,7 @@ public struct BarRootView: View {
         if let view = WidgetRegistry.shared.view(for: id) {
             view
         }
-        // Unknown IDs: error already reported by ConfigLoader at load time; silently skip here.
+        // Unknown IDs: silently skip (error reported by ConfigLoader at load time).
     }
 
     @ViewBuilder
@@ -71,20 +69,13 @@ public struct BarRootView: View {
     }
 
     // MARK: - Built-in layout (notch avoidance)
-    //
-    // NowPlaying prefers the right side (just left of the status widgets). If the right
-    // half isn't wide enough to fit both NowPlaying and the status widgets without
-    // spilling under the notch, ViewThatFits picks the fallback (status widgets only)
-    // and reports that via NowPlayingFitsRightKey. The left half then shows NowPlaying
-    // right-aligned, safely to the left of the notch.
 
     private var builtIn: some View {
         HStack(spacing: 0) {
-            // Left half: left-zone widgets, and center-zone as fallback if they don't fit right
             HStack(spacing: Theme.itemGap) {
                 zoneWidgets(cfg.widgets.left)
                 Spacer(minLength: 0)
-                if !nowPlayingFitsRight {
+                if !centerFitsRight {
                     zoneWidgets(cfg.widgets.center)
                 }
             }
@@ -92,26 +83,23 @@ public struct BarRootView: View {
 
             Spacer().frame(width: Theme.notchWidth)
 
-            // Right half: try to fit center-zone here first
             HStack(spacing: Theme.itemGap) {
                 Spacer(minLength: 0)
                 ViewThatFits(in: .horizontal) {
-                    // Preferred: center + right widgets
                     HStack(spacing: Theme.itemGap) {
                         zoneWidgets(cfg.widgets.center)
                         zoneWidgets(cfg.widgets.right)
                     }
-                    .preference(key: NowPlayingFitsRightKey.self, value: true)
+                    .preference(key: CenterFitsRightKey.self, value: true)
 
-                    // Fallback: right widgets only; center moves to left half
                     HStack(spacing: Theme.itemGap) {
                         zoneWidgets(cfg.widgets.right)
                     }
-                    .preference(key: NowPlayingFitsRightKey.self, value: false)
+                    .preference(key: CenterFitsRightKey.self, value: false)
                 }
             }
             .padding(bar.padding)
-            .onPreferenceChange(NowPlayingFitsRightKey.self) { nowPlayingFitsRight = $0 }
+            .onPreferenceChange(CenterFitsRightKey.self) { centerFitsRight = $0 }
         }
     }
 

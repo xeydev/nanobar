@@ -108,15 +108,4 @@ public extension EnvironmentValues {
     }
 }
 
-// MARK: - MonitorID environment key
-
-private struct MonitorIDKey: EnvironmentKey {
-    static let defaultValue: Int = 0
-}
-
-public extension EnvironmentValues {
-    var monitorID: Int {
-        get { self[MonitorIDKey.self] }
-        set { self[MonitorIDKey.self] = newValue }
-    }
-}
+// monitorID environment key lives in NanoBarPluginAPI (re-exported via GlassPill.swift).

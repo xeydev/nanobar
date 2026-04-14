@@ -117,36 +117,37 @@ public struct NanoConfig: Decodable, Sendable {
         specular     = true
         cornerRadius = 15
 
-        # ─── Built-in widget config (all sections are optional) ───────────────────────
+        # ─── Standard plugin settings (optional overrides) ────────────────────────────
+        # Standard plugins are auto-loaded from the Plugins/ directory — no bundle
+        # path needed. Add a section only to override defaults.
 
-        [plugins.clock]
-        format = "EEE dd MMM HH:mm"
-        color  = "#FF7EB6"
+        # [plugins.clock]
+        # format = "EEE dd MMM HH:mm"
+        # color  = "#FF7EB6"
 
-        [plugins.battery]
-        color     = "#B5EAD7"
-        warnColor = "#FFD1A8"
-        medColor  = "#FEFAC1"
-        lowColor  = "#FFB3BF"
+        # [plugins.battery]
+        # color     = "#B5EAD7"
+        # warnColor = "#FFD1A8"
+        # medColor  = "#FEFAC1"
+        # lowColor  = "#FFB3BF"
 
-        [plugins.volume]
-        color = "#AEC6CF"
+        # [plugins.volume]
+        # color = "#AEC6CF"
 
-        [plugins.keyboard]
-        color = "#DDB6F2"
+        # [plugins.keyboard]
+        # color = "#DDB6F2"
 
-        [plugins.now_playing]
-        activeColor = "#B5EAD7"
+        # [plugins.workspaces]
+        # mode = "clampAndExpand"  # labelsOnly | activeIcons | clampAndExpand
 
-        [plugins.workspaces]
-        mode = "clampAndExpand"  # labelsOnly | activeIcons | clampAndExpand
+        # [plugins.now_playing]
+        # activeColor = "#B5EAD7"
 
-        # ─── External plugins ─────────────────────────────────────────────────────────
-        # Presence of "bundle" key (absolute path) marks this as an external plugin.
-        # All other keys are forwarded to the plugin as [String: String].
+        # ─── Third-party plugins ──────────────────────────────────────────────────────
+        # Custom plugins require an explicit bundle path.
         #
-        # [plugins.mywidget]
-        # bundle = "/path/to/MyWidget.bundle"
+        # [plugins.myplugin]
+        # bundle = "/path/to/MyPlugin.bundle"
         # color  = "#AEC6CF"
         """
 

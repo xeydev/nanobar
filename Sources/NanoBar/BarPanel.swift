@@ -9,12 +9,11 @@ final class BarPanel: NSPanel {
     private var menuBarVisible = false
     private var fullscreenHidden = false
 
-    init(screen: NSScreen, monitorID: Int, state: BarState) {
+    init(screen: NSScreen, monitorID: Int) {
         self.associatedScreen = screen
         let frame    = BarPanel.barFrame(for: screen)
         let isBuiltIn = screen.localizedName.lowercased().contains("built-in")
         let rootView = BarRootView(isBuiltIn: isBuiltIn, monitorID: monitorID)
-            .environmentObject(state)
             .environmentObject(ConfigLoader.shared)
             .onPreferenceChange(InteractiveRegionKey.self) { rects in
                 Task { @MainActor in
@@ -33,14 +32,14 @@ final class BarPanel: NSPanel {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = CGColor(red: 0, green: 0, blue: 0, alpha: 0)
 
-        level                     = .statusBar
-        collectionBehavior        = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        level                       = .statusBar
+        collectionBehavior          = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
-        isOpaque                  = false
-        backgroundColor           = .clear
-        hasShadow                 = false
-        ignoresMouseEvents        = true
-        contentView               = hosting
+        isOpaque                    = false
+        backgroundColor             = .clear
+        hasShadow                   = false
+        ignoresMouseEvents          = true
+        contentView                 = hosting
     }
 
     func adjustForMenuBar(visible: Bool) {

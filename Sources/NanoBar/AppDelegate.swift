@@ -2,15 +2,12 @@ import AppKit
 import Carbon
 import Widgets
 import Monitors
-import AeroSpaceClient
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
-    private let barState = BarState()
     private var mouseMonitors: [Any] = []
     private var fullscreenObservers: [Any] = []
-    private var monitorsStarted = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -31,38 +28,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Reinit
 
     /// Called on first launch and on every successful config reload.
-    /// Tears down panels and widget registry, then rebuilds everything from current config.
+    /// Tears down panels and widget registry, then rebuilds from current config.
     private func reinit() {
         barPanels.forEach { $0.close() }
         barPanels.removeAll()
 
-        // Stop so it restarts with a potentially new format
-        ClockMonitor.shared.stop()
-
         let config = ConfigLoader.shared.config
         WidgetRegistry.shared.clear()
-        WidgetRegistry.shared.registerBuiltIns(config: config)
         PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
 
         setupBars()
-
-        ClockMonitor.shared.start(format: config.plugins["clock"]?.settings["format"] ?? "EEE dd MMM HH:mm")
-
-        if !monitorsStarted {
-            monitorsStarted = true
-            BatteryMonitor.shared.start()
-            VolumeMonitor.shared.start()
-            KeyboardMonitor.shared.start()
-            MediaRemoteMonitor.shared.start()
-            AeroSpaceMonitor.shared.start()
-        }
     }
 
     // MARK: - Bar setup
 
     private func setupBars() {
         for (index, screen) in NSScreen.screens.enumerated() {
-            let panel = BarPanel(screen: screen, monitorID: index + 1, state: barState)
+            let panel = BarPanel(screen: screen, monitorID: index + 1)
             panel.orderFront(nil)
             barPanels.append(panel)
         }
@@ -87,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             GetApplicationEventTarget(),
             { (_, event, userData) -> OSStatus in
                 guard let event, let userData else { return noErr }
-                let shown = GetEventKind(event) == UInt32(kEventMenuBarShown)
+                let shown    = GetEventKind(event) == UInt32(kEventMenuBarShown)
                 let delegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
                 DispatchQueue.main.async { delegate.handleMenuBarVisibility(visible: shown) }
                 return noErr
@@ -112,9 +94,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.checkFullscreenState() }
         }
         fullscreenObservers = [
-            ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: nil, using: handler),
-            ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: nil, using: handler),
-            ws.addObserver(forName: NSWorkspace.didDeactivateApplicationNotification, object: nil, queue: nil, using: handler),
+            ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,      object: nil, queue: nil, using: handler),
+            ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification,    object: nil, queue: nil, using: handler),
+            ws.addObserver(forName: NSWorkspace.didDeactivateApplicationNotification,  object: nil, queue: nil, using: handler),
         ]
     }
 
@@ -132,7 +114,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let boundsDict = info[kCGWindowBounds as String] as? NSDictionary else { continue }
             var cgRect = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(boundsDict, &cgRect) else { continue }
-            // Convert Quartz (top-left origin) → Cocoa (bottom-left origin)
             let cocoaRect = CGRect(x: cgRect.minX, y: primaryH - cgRect.maxY, width: cgRect.width, height: cgRect.height)
             if cocoaRect == screen.frame { return true }
         }
@@ -141,9 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Mouse pass-through
 
-    // Toggles ignoresMouseEvents per-panel based on whether the cursor is over
-    // an interactive region. Global monitor fires when events go to other apps
-    // (ignoresMouseEvents = true). Local monitor fires when they come to us.
     private func installMouseMonitors() {
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.syncMousePassThrough() }
         let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: handler)!
@@ -164,5 +142,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-
 }

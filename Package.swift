@@ -6,6 +6,8 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [
         .package(url: "https://github.com/LebJe/TOMLKit", from: "0.5.0"),
+        // Standalone package so the dylib is shared with external plugins at runtime.
+        .package(path: "NanoBarPluginAPI"),
     ],
     targets: [
         .executableTarget(
@@ -15,32 +17,23 @@ let package = Package(
         ),
         .executableTarget(
             name: "NanoBar",
-            dependencies: ["Widgets", "Monitors", "AeroSpaceClient", "NanoBarKit"],
+            dependencies: ["Widgets", "Monitors"],
             path: "Sources/NanoBar",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "Widgets",
-            dependencies: ["AeroSpaceClient", "Monitors", "NanoBarKit"],
+            dependencies: [
+                "Monitors",
+                .product(name: "NanoBarPluginAPI", package: "NanoBarPluginAPI"),
+            ],
             path: "Sources/Widgets",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
             name: "Monitors",
-            dependencies: ["AeroSpaceClient", .product(name: "TOMLKit", package: "TOMLKit")],
+            dependencies: [.product(name: "TOMLKit", package: "TOMLKit")],
             path: "Sources/Monitors",
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
-        .target(
-            name: "NanoBarKit",
-            dependencies: [],
-            path: "Sources/NanoBarKit",
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
-        .target(
-            name: "AeroSpaceClient",
-            dependencies: [],
-            path: "Sources/AeroSpaceClient",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]
