@@ -5,8 +5,9 @@ import Monitors
 
 @MainActor
 final class BarPanel: NSPanel {
-    private let associatedScreen: NSScreen
+    let associatedScreen: NSScreen
     private var menuBarVisible = false
+    private var fullscreenHidden = false
 
     init(screen: NSScreen, monitorID: Int, state: BarState) {
         self.associatedScreen = screen
@@ -45,6 +46,7 @@ final class BarPanel: NSPanel {
     func adjustForMenuBar(visible: Bool) {
         guard visible != menuBarVisible else { return }
         menuBarVisible = visible
+        guard !fullscreenHidden else { return }
         var target = BarPanel.barFrame(for: associatedScreen)
         if visible { target.origin.y = associatedScreen.frame.maxY }
         NSAnimationContext.runAnimationGroup { ctx in
@@ -52,6 +54,17 @@ final class BarPanel: NSPanel {
             ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animator().setFrame(target, display: true)
             animator().alphaValue = visible ? 0 : 1
+        }
+    }
+
+    func setFullscreenHidden(_ hidden: Bool) {
+        guard hidden != fullscreenHidden else { return }
+        fullscreenHidden = hidden
+        let targetAlpha: CGFloat = (hidden || menuBarVisible) ? 0 : 1
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.25
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animator().alphaValue = targetAlpha
         }
     }
 
