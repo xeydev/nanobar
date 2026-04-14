@@ -1,6 +1,6 @@
 # NanoBar
 
-A lightweight, plugin-based status bar for macOS built with Swift and SwiftUI. Designed as a fast, native alternative to scripted status bars.
+A lightweight, plugin-based status bar for macOS built with Swift and SwiftUI. Designed as a fast, native alternative to macOS topbar.
 
 > **Requires macOS 15 (Sequoia) or later**
 
