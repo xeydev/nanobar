@@ -54,9 +54,12 @@ private final class NowPlayingState: ObservableObject, @unchecked Sendable {
         else { return }
         let t = json["title"]  as? String
         let a = json["artist"] as? String
-        title     = t.flatMap { $0.isEmpty ? nil : $0 }
-        artist    = a.flatMap { $0.isEmpty ? nil : $0 }
-        isPlaying = (json["rate"] as? Double ?? 0) > 0
+        let newTitle    = t.flatMap { $0.isEmpty ? nil : $0 }
+        let newArtist   = a.flatMap { $0.isEmpty ? nil : $0 }
+        let newPlaying  = (json["rate"] as? Double ?? 0) > 0
+        if newTitle   != title     { title     = newTitle   }
+        if newArtist  != artist    { artist    = newArtist  }
+        if newPlaying != isPlaying { isPlaying = newPlaying }
     }
 }
 
@@ -186,15 +189,7 @@ private final class SpotifyWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var activeColor: Color {
-        guard let hex = config["activeColor"],
-              hex.hasPrefix("#"), hex.count == 7,
-              let value = UInt64(hex.dropFirst(), radix: 16)
-        else { return Color(red: 0.710, green: 0.918, blue: 0.843) } // mint
-        return Color(
-            red:   Double((value >> 16) & 0xFF) / 255,
-            green: Double((value >>  8) & 0xFF) / 255,
-            blue:  Double( value        & 0xFF) / 255
-        )
+        Theme.color(hex: config["activeColor"]) ?? Theme.spotifyActive
     }
 }
 

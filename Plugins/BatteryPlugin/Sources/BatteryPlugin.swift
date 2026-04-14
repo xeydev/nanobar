@@ -6,7 +6,7 @@ import NanoBarPluginAPI
 
 // MARK: - Battery info
 
-private struct BatteryInfo: Sendable {
+private struct BatteryInfo: Sendable, Equatable {
     let percentage: Int
     let isCharging: Bool
 
@@ -55,7 +55,8 @@ private final class BatteryState: ObservableObject, @unchecked Sendable {
     }
 
     private func refresh() {
-        info = BatteryInfo.read()
+        let new = BatteryInfo.read()
+        if new != info { info = new }
     }
 }
 

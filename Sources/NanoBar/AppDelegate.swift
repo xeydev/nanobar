@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installFullscreenObservers() {
         let ws = NSWorkspace.shared.notificationCenter
-        let handler: (Notification) -> Void = { [weak self] _ in
+        let handler: @Sendable (Notification) -> Void = { [weak self] _ in
             DispatchQueue.main.async { self?.checkFullscreenState() }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.checkFullscreenState() }
         }
@@ -124,11 +124,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installMouseMonitors() {
         let handler: (NSEvent) -> Void = { [weak self] _ in self?.syncMousePassThrough() }
-        let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: handler)!
-        let local  = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: handler) {
+            mouseMonitors.append(global)
+        }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved, handler: { [weak self] event in
             self?.syncMousePassThrough(); return event
-        }!
-        mouseMonitors = [global, local]
+        }) {
+            mouseMonitors.append(local)
+        }
     }
 
     private func syncMousePassThrough() {

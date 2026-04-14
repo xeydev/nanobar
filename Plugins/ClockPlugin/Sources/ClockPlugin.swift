@@ -32,7 +32,8 @@ private final class ClockState: ObservableObject, @unchecked Sendable {
     }
 
     private func tick() {
-        text = formatter.string(from: Date())
+        let new = formatter.string(from: Date())
+        if new != text { text = new }
     }
 }
 

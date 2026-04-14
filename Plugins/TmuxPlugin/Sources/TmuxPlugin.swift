@@ -16,7 +16,7 @@ private final class TmuxState: ObservableObject {
                 let count = await Task.detached(priority: .utility) {
                     TmuxState.readSessionCount()
                 }.value
-                self?.sessionCount = count
+                if self?.sessionCount != count { self?.sessionCount = count }
                 try? await Task.sleep(for: .seconds(5))
             }
         }
@@ -47,14 +47,15 @@ private struct TmuxWidgetView: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.iconLabelSpacing) {
             Image(systemName: "terminal.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(color)
             Text("\(state.sessionCount)")
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.primary)
+                .font(.system(size: Theme.labelSize, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Theme.labelColor)
                 .lineLimit(1)
+                .stableMinWidth()
         }
         .glassPill()
         .animation(.easeInOut(duration: 0.3), value: state.sessionCount)
@@ -74,17 +75,7 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var accentColor: Color {
-        guard let hex = config["color"],
-              hex.hasPrefix("#"), hex.count == 7,
-              let value = UInt64(hex.dropFirst(), radix: 16)
-        else {
-            return Color(red: 0.678, green: 0.918, blue: 0.686) // default: mint green
-        }
-        return Color(
-            red:   Double((value >> 16) & 0xFF) / 255,
-            green: Double((value >>  8) & 0xFF) / 255,
-            blue:  Double( value        & 0xFF) / 255
-        )
+        Theme.color(hex: config["color"]) ?? Color(red: 0.678, green: 0.918, blue: 0.686)
     }
 }
 

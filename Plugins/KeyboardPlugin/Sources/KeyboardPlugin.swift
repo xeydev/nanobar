@@ -40,7 +40,8 @@ private final class KeyboardState: ObservableObject, @unchecked Sendable {
     }
 
     func update() {
-        layout = currentLayout()
+        let new = currentLayout()
+        if new != layout { layout = new }
     }
 
     private func currentLayout() -> String {

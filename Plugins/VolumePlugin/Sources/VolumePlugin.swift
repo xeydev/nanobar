@@ -107,7 +107,8 @@ private final class VolumeState: ObservableObject, @unchecked Sendable {
     }
 
     func refreshVolume() {
-        volume = VolumeState.readVolume(deviceID: currentDeviceID)
+        let new = VolumeState.readVolume(deviceID: currentDeviceID)
+        if new != volume { volume = new }
     }
 
     private static func readVolume(deviceID: AudioDeviceID) -> Float {

@@ -50,9 +50,8 @@ public final class PluginLoader {
     private func discoverBundles(in dir: URL, config: NanoConfig) {
         let fm = FileManager.default
         guard let items = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return }
-        let alreadyLoaded = Set(loaded.map { $0.bundlePath })
         for url in items.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard url.pathExtension == "bundle", !alreadyLoaded.contains(url.path) else { continue }
+            guard url.pathExtension == "bundle" else { continue }
             loadBundle(at: url, pluginID: nil)
         }
     }
@@ -60,8 +59,7 @@ public final class PluginLoader {
     /// Loads a bundle and appends it to `loaded`. `pluginID` is read from the entry
     /// if nil (requires the protocol's `pluginID` property).
     private func loadBundle(at url: URL, pluginID: String?) {
-        let alreadyLoaded = Set(loaded.map { $0.bundlePath })
-        guard !alreadyLoaded.contains(url.path) else { return }
+        guard !loaded.contains(where: { $0.bundlePath == url.path }) else { return }
         guard let bundle = Bundle(url: url), bundle.load() else {
             ConfigLoader.shared.report(.bundleNotFound(path: url.path))
             return
