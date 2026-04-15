@@ -16,6 +16,15 @@ private final class VolumeState: ObservableObject, @unchecked Sendable {
     nonisolated(unsafe) private var deviceListenerAdded = false
     nonisolated(unsafe) private var currentDeviceID: AudioDeviceID = kAudioObjectUnknown
 
+    // Cached at device-attach time — avoids Mach IPC (AudioObjectHasProperty) in the hot read path.
+    nonisolated(unsafe) private var cachedVolumeElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
+    nonisolated(unsafe) private var cachedHasMute: Bool = false
+
+    // Serial queue + debounce: serializes CoreAudio IPC reads, prevents thread explosion.
+    // All access to pendingRead is from readQueue, so no additional lock needed.
+    nonisolated(unsafe) private let readQueue = DispatchQueue(label: "com.nanobar.volume.read", qos: .userInitiated)
+    nonisolated(unsafe) private var pendingRead: DispatchWorkItem?
+
     init() {
         ctx = Unmanaged.passRetained(self).toOpaque()
         listenForDefaultDeviceChange()
@@ -88,12 +97,28 @@ private final class VolumeState: ObservableObject, @unchecked Sendable {
         currentDeviceID = deviceID
         guard currentDeviceID != kAudioObjectUnknown else { return }
 
-        var volAddr = volumePropertyAddress(forDevice: currentDeviceID)
+        // Cache capabilities — AudioObjectHasProperty is a Mach IPC call, do it once here.
+        var volAddrMain = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if AudioObjectHasProperty(currentDeviceID, &volAddrMain) {
+            cachedVolumeElement = kAudioObjectPropertyElementMain
+        } else {
+            cachedVolumeElement = 1
+        }
+        var volAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: cachedVolumeElement
+        )
         AudioObjectAddPropertyListener(currentDeviceID, &volAddr, volumeListenerCallback, ctx)
         volumeListenerAdded = true
 
         var muteAddr = mutePropertyAddress()
-        if AudioObjectHasProperty(currentDeviceID, &muteAddr) {
+        cachedHasMute = AudioObjectHasProperty(currentDeviceID, &muteAddr)
+        if cachedHasMute {
             AudioObjectAddPropertyListener(currentDeviceID, &muteAddr, volumeListenerCallback, ctx)
             muteListenerAdded = true
         }
@@ -102,57 +127,57 @@ private final class VolumeState: ObservableObject, @unchecked Sendable {
     nonisolated(unsafe) private let volumeListenerCallback: AudioObjectPropertyListenerProc = { _, _, _, ctx in
         guard let ctx else { return noErr }
         let s = Unmanaged<VolumeState>.fromOpaque(ctx).takeUnretainedValue()
-        Task { @MainActor in s.refreshVolume() }
+        let deviceID = s.currentDeviceID
+        let element  = s.cachedVolumeElement
+        let hasMute  = s.cachedHasMute
+        // Enqueue onto serial readQueue — serializes all access to pendingRead.
+        // The asyncAfter debounce lets coreaudiod finish processing before we IPC into it.
+        s.readQueue.async {
+            s.pendingRead?.cancel()
+            let item = DispatchWorkItem {
+                let new = VolumeState.readVolume(deviceID: deviceID, element: element, hasMute: hasMute)
+                DispatchQueue.main.async { if s.volume != new { s.volume = new } }
+            }
+            s.pendingRead = item
+            s.readQueue.asyncAfter(deadline: .now() + 0.05, execute: item)
+        }
         return noErr
     }
 
     func refreshVolume() {
-        let new = VolumeState.readVolume(deviceID: currentDeviceID)
+        let new = VolumeState.readVolume(deviceID: currentDeviceID, element: cachedVolumeElement, hasMute: cachedHasMute)
         if new != volume { volume = new }
     }
 
-    private static func readVolume(deviceID: AudioDeviceID) -> Float {
+    /// No AudioObjectHasProperty calls — all capability info is pre-cached at device-attach time.
+    nonisolated private static func readVolume(deviceID: AudioDeviceID, element: AudioObjectPropertyElement, hasMute: Bool) -> Float {
         guard deviceID != kAudioObjectUnknown else { return 0 }
-        if readMute(deviceID: deviceID) { return 0 }
-        if let v = readScalar(deviceID: deviceID, element: kAudioObjectPropertyElementMain) { return v }
-        if let v = readScalar(deviceID: deviceID, element: 1) { return v }
-        return 0
+        if hasMute && readMute(deviceID: deviceID) { return 0 }
+        return readScalar(deviceID: deviceID, element: element) ?? 0
     }
 
-    private static func readMute(deviceID: AudioDeviceID) -> Bool {
+    nonisolated private static func readMute(deviceID: AudioDeviceID) -> Bool {
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyMute,
             mScope: kAudioDevicePropertyScopeOutput,
             mElement: kAudioObjectPropertyElementMain
         )
-        guard AudioObjectHasProperty(deviceID, &addr) else { return false }
         var muted: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &muted) == noErr else { return false }
         return muted != 0
     }
 
-    private static func readScalar(deviceID: AudioDeviceID, element: AudioObjectPropertyElement) -> Float? {
+    nonisolated private static func readScalar(deviceID: AudioDeviceID, element: AudioObjectPropertyElement) -> Float? {
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyVolumeScalar,
             mScope: kAudioDevicePropertyScopeOutput,
             mElement: element
         )
-        guard AudioObjectHasProperty(deviceID, &addr) else { return nil }
         var vol: Float32 = 0
         var size = UInt32(MemoryLayout<Float32>.size)
         guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &vol) == noErr else { return nil }
         return vol
-    }
-
-    nonisolated private func volumePropertyAddress(forDevice deviceID: AudioDeviceID) -> AudioObjectPropertyAddress {
-        var addr = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        if !AudioObjectHasProperty(deviceID, &addr) { addr.mElement = 1 }
-        return addr
     }
 
     nonisolated private func mutePropertyAddress() -> AudioObjectPropertyAddress {
@@ -160,6 +185,14 @@ private final class VolumeState: ObservableObject, @unchecked Sendable {
             mSelector: kAudioDevicePropertyMute,
             mScope: kAudioDevicePropertyScopeOutput,
             mElement: kAudioObjectPropertyElementMain
+        )
+    }
+
+    nonisolated private func volumePropertyAddress(forDevice deviceID: AudioDeviceID) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: cachedVolumeElement
         )
     }
 }
@@ -184,7 +217,6 @@ private struct VolumeWidgetView: View {
                 .stableMinWidth()
         }
         .glassPill()
-        .animation(.easeInOut(duration: 0.4), value: isMuted)
     }
 
     // Single Image — identity preserved so Magic Replace fires correctly on mute/unmute.
@@ -196,7 +228,7 @@ private struct VolumeWidgetView: View {
         .font(.system(size: 14))
         .foregroundStyle(color)
         .frame(width: 20, height: 14)
-        .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
+        .contentTransition(.symbolEffect(.replace))
     }
 }
 

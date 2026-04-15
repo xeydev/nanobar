@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
     private var mouseMonitors: [Any] = []
     private var fullscreenObservers: [Any] = []
+    private var fullscreenCheckWork: DispatchWorkItem?
+    private var mouseSyncPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -90,8 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installFullscreenObservers() {
         let ws = NSWorkspace.shared.notificationCenter
         let handler: @Sendable (Notification) -> Void = { [weak self] _ in
-            DispatchQueue.main.async { self?.checkFullscreenState() }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.checkFullscreenState() }
+            DispatchQueue.main.async { self?.scheduleFullscreenCheck() }
         }
         fullscreenObservers = [
             ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,      object: nil, queue: nil, using: handler),
@@ -100,22 +101,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
     }
 
+    private func scheduleFullscreenCheck() {
+        fullscreenCheckWork?.cancel()
+        let item = DispatchWorkItem { [weak self] in self?.checkFullscreenState() }
+        fullscreenCheckWork = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: item)
+    }
+
     private func checkFullscreenState() {
-        for panel in barPanels {
-            panel.setFullscreenHidden(screenHasFullscreenWindow(panel.associatedScreen))
+        // Snapshot main-thread data, then do the expensive window list query off-main.
+        let primaryH = NSScreen.screens.first?.frame.height ?? 0
+        let targets = barPanels.map { (panel: $0, sf: $0.associatedScreen.frame) }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let results = targets.map { (panel, sf) in
+                (panel, AppDelegate.screenHasFullscreenWindow(sf: sf, primaryH: primaryH))
+            }
+            DispatchQueue.main.async {
+                for (panel, hidden) in results { panel.setFullscreenHidden(hidden) }
+            }
         }
     }
 
-    private func screenHasFullscreenWindow(_ screen: NSScreen) -> Bool {
+    nonisolated private static func screenHasFullscreenWindow(sf: CGRect, primaryH: CGFloat) -> Bool {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
-        let primaryH = NSScreen.screens.first?.frame.height ?? 0
         for info in list {
             guard let layer = info[kCGWindowLayer as String] as? Int else { continue }
             guard let boundsDict = info[kCGWindowBounds as String] as? NSDictionary else { continue }
             var cgRect = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(boundsDict, &cgRect) else { continue }
             let cocoaRect = CGRect(x: cgRect.minX, y: primaryH - cgRect.maxY, width: cgRect.width, height: cgRect.height)
-            let sf = screen.frame
             let coversScreen = layer <= 0
                 && cocoaRect.width  == sf.width
                 && cocoaRect.minX   == sf.minX
@@ -141,13 +155,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func syncMousePassThrough() {
-        let loc = NSEvent.mouseLocation
-        for panel in barPanels {
-            let windowPoint = panel.convertPoint(fromScreen: loc)
-            let interactive = panel.frame.contains(loc)
-                           && panel.contentView?.hitTest(windowPoint) != nil
-            if panel.ignoresMouseEvents == interactive {
-                panel.ignoresMouseEvents = !interactive
+        guard !mouseSyncPending else { return }
+        mouseSyncPending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.mouseSyncPending = false
+            let loc = NSEvent.mouseLocation
+            for panel in self.barPanels {
+                let windowPoint = panel.convertPoint(fromScreen: loc)
+                let interactive = panel.frame.contains(loc)
+                               && panel.contentView?.hitTest(windowPoint) != nil
+                if panel.ignoresMouseEvents == interactive {
+                    panel.ignoresMouseEvents = !interactive
+                }
             }
         }
     }

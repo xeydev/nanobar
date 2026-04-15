@@ -4,7 +4,7 @@ import NanoBarPluginAPI
 
 // MARK: - Live state
 
-/// Polls `tmux list-sessions` every 5 seconds and publishes the count.
+/// Polls `tmux list-sessions` every 10 seconds and publishes the count.
 @MainActor
 private final class TmuxState: ObservableObject {
     @Published var sessionCount: Int = 0
@@ -17,17 +17,29 @@ private final class TmuxState: ObservableObject {
                     TmuxState.readSessionCount()
                 }.value
                 if self?.sessionCount != count { self?.sessionCount = count }
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(10))
             }
         }
     }
 
     deinit { pollingTask?.cancel() }
 
+    /// Resolved once per process; nil if tmux not found in PATH.
+    nonisolated static let tmuxURL: URL? = {
+        let candidates = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/usr/bin/tmux"]
+        for path in candidates {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return nil
+    }()
+
     nonisolated static func readSessionCount() -> Int {
+        guard let url = tmuxURL else { return 0 }
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        proc.arguments = ["tmux", "list-sessions"]
+        proc.executableURL = url
+        proc.arguments = ["list-sessions"]
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = Pipe()

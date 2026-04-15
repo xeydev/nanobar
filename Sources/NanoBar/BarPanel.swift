@@ -29,6 +29,10 @@ final class BarPanel: NSPanel {
             defer: false
         )
 
+        // Panel has a fixed frame — disable SwiftUI's per-frame sizeThatFits computation.
+        // Without this, NSHostingView.layout() calls _sizeThatFits on every display cycle
+        // which traverses the entire view graph (StackLayout, ViewThatFits, GeometryReaders).
+        hosting.sizingOptions = []
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = CGColor(red: 0, green: 0, blue: 0, alpha: 0)
 

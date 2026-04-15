@@ -8,6 +8,7 @@ import NanoBarPluginAPI
 @MainActor
 private final class KeyboardState: ObservableObject, @unchecked Sendable {
     @Published var layout: String = "US"
+    private var updateTask: Task<Void, Never>?
 
     init() {
         layout = currentLayout()
@@ -19,7 +20,7 @@ private final class KeyboardState: ObservableObject, @unchecked Sendable {
             { _, observer, _, _, _ in
                 guard let observer else { return }
                 let state = Unmanaged<KeyboardState>.fromOpaque(observer).takeUnretainedValue()
-                Task { @MainActor in state.update() }
+                Task { @MainActor in state.scheduleUpdate() }
             },
             kTISNotifySelectedKeyboardInputSourceChanged,
             nil,
@@ -39,9 +40,16 @@ private final class KeyboardState: ObservableObject, @unchecked Sendable {
         Unmanaged<KeyboardState>.fromOpaque(ptr).release()
     }
 
-    func update() {
-        let new = currentLayout()
-        if new != layout { layout = new }
+    // TIS notifications can fire multiple times per source change, and TIS needs ~50ms to
+    // settle before the new source is readable. Debounce: cancel previous task, wait 50ms.
+    func scheduleUpdate() {
+        updateTask?.cancel()
+        updateTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            let new = currentLayout()
+            if new != layout { layout = new }
+        }
     }
 
     private func currentLayout() -> String {

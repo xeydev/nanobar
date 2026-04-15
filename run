@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+echo "── plugins ──"
+for plugin_dir in "$ROOT/Plugins"/*/; do
+    plugin_name="$(basename "$plugin_dir")"
+    echo "  $plugin_name"
+    (cd "$plugin_dir" && bash build.sh 2>&1) | grep -E "error:|warning:.*error|Built:|Signing|Building" || true
+done
+
+echo "── NanoBar ──"
+(cd "$ROOT" && swift build -c release 2>&1 | grep -E "error:|Build complete")
+codesign --force --sign - --identifier com.apple.controlcenter "$ROOT/.build/release/NowPlayingHelper"
+
+echo "── linking ──"
+PLUGINS_DEST="$ROOT/.build/release/Plugins"
+mkdir -p "$PLUGINS_DEST"
+for plugin_dir in "$ROOT/Plugins"/*/; do
+    plugin_name="$(basename "$plugin_dir")"
+    bundle="$plugin_dir/$plugin_name.bundle"
+    [ -d "$bundle" ] && ln -sfn "$(realpath "$bundle")" "$PLUGINS_DEST/$plugin_name.bundle"
+done
+
+echo "── starting ──"
+pkill -x NanoBar 2>/dev/null || true
+sleep 0.3
+"$ROOT/.build/release/NanoBar" > /tmp/nanobar.log 2>&1 &
+echo "PID $!"
