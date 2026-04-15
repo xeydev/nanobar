@@ -110,12 +110,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
         let primaryH = NSScreen.screens.first?.frame.height ?? 0
         for info in list {
-            guard (info[kCGWindowLayer as String] as? Int) == 0 else { continue }
+            guard let layer = info[kCGWindowLayer as String] as? Int else { continue }
             guard let boundsDict = info[kCGWindowBounds as String] as? NSDictionary else { continue }
             var cgRect = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(boundsDict, &cgRect) else { continue }
             let cocoaRect = CGRect(x: cgRect.minX, y: primaryH - cgRect.maxY, width: cgRect.width, height: cgRect.height)
-            if cocoaRect == screen.frame { return true }
+            let sf = screen.frame
+            let coversScreen = layer <= 0
+                && cocoaRect.width  == sf.width
+                && cocoaRect.minX   == sf.minX
+                && cocoaRect.minY   == sf.minY
+                && cocoaRect.height >= sf.height - 50
+            if coversScreen { return true }
         }
         return false
     }
