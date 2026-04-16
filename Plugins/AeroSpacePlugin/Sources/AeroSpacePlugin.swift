@@ -56,6 +56,8 @@ private struct WindowInfo: Sendable, Equatable {
 
 @MainActor
 private final class WorkspacesState: ObservableObject, @unchecked Sendable {
+    static let shared = WorkspacesState()
+
     @Published var states: [WorkspaceState] = []
 
     private var cachedStates: [WorkspaceState] = []
@@ -83,7 +85,8 @@ private final class WorkspacesState: ObservableObject, @unchecked Sendable {
         appTerminationObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
         notifySource?.cancel()
         if serverFD >= 0 { close(serverFD) }
-        unlink(notifySocketPath)
+        // Don't unlink the socket path here — startNotifySocket() handles cleanup on
+        // next bind, and unlinking here would destroy a socket created by a newer instance.
     }
 
     // MARK: - Notify socket
@@ -311,7 +314,7 @@ private enum WorkspaceMode: String {
 // MARK: - Root view
 
 private struct WorkspaceBarView: View {
-    @StateObject private var state = WorkspacesState()
+    @ObservedObject private var state = WorkspacesState.shared
     @Environment(\.monitorID) private var monitorID
 
     let mode: WorkspaceMode

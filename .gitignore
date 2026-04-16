@@ -3,3 +3,4 @@
 *.xcworkspace
 .swiftpm/
 DerivedData/
+Plugins/**/*.bundle/
