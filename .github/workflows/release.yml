@@ -28,7 +28,7 @@ jobs:
           fi
 
       - name: Build release
-        run: bash build-release.sh
+        run: bash build-release.sh "${{ inputs.version }}"
 
       - name: Compute SHA256
         id: sha

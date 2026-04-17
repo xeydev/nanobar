@@ -46,7 +46,7 @@ private final class BatteryState: ObservableObject, @unchecked Sendable {
         }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.refresh() }
+        ) { [weak self] _ in MainActor.assumeIsolated { self?.refresh() } }
     }
 
     deinit {
