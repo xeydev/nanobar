@@ -27,13 +27,6 @@ jobs:
             exit 1
           fi
 
-      - name: Tag commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
-
       - name: Build release
         run: bash build-release.sh
 
@@ -60,6 +53,13 @@ jobs:
           ## SHA256
           \`${{ steps.sha.outputs.sha256 }}\`" \
             "nanobar-${{ inputs.version }}-arm64.tar.gz"
+
+      - name: Tag commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
 
       - name: Print formula snippet
         run: |
