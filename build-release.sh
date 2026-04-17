@@ -20,6 +20,7 @@ swift build -c release 2>&1 | grep -E "error:|Build complete|warning: "
 
 cp .build/release/NanoBar "$DIST/libexec/NanoBar"
 cp .build/release/NowPlayingHelper "$DIST/libexec/NowPlayingHelper"
+cp .build/release/libNanoBarPluginAPI.dylib "$DIST/libexec/libNanoBarPluginAPI.dylib"
 
 # NowPlayingHelper must carry the controlcenter identifier for MediaRemote access
 codesign --sign - \
