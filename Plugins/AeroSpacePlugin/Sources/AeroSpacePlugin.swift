@@ -77,7 +77,7 @@ private final class WorkspacesState: ObservableObject, @unchecked Sendable {
         ) { [weak self] notification in
             guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                   let name = app.localizedName else { return }
-            self?.removeApp(named: name)
+            MainActor.assumeIsolated { self?.removeApp(named: name) }
         }
     }
 
