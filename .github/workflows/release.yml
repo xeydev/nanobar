@@ -40,11 +40,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          notes="## SHA256
-\`${{ steps.sha.outputs.sha256 }}\`"
           gh release create "v${{ inputs.version }}" \
             --title "NanoBar v${{ inputs.version }}" \
-            --notes "$notes" \
+            --notes "SHA256: `${{ steps.sha.outputs.sha256 }}`" \
             "nanobar-${{ inputs.version }}-arm64.tar.gz"
 
       - name: Trigger formula update
