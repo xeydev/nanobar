@@ -42,7 +42,7 @@ jobs:
         run: |
           gh release create "v${{ inputs.version }}" \
             --title "NanoBar v${{ inputs.version }}" \
-            --notes "SHA256: `${{ steps.sha.outputs.sha256 }}`" \
+            --notes "SHA256: ${{ steps.sha.outputs.sha256 }}" \
             "nanobar-${{ inputs.version }}-arm64.tar.gz"
 
       - name: Trigger formula update
