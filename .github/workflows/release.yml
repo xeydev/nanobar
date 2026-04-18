@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. 1.0.0)'
+        description: "Version (e.g. 1.0.0)"
         required: true
         type: string
 
@@ -40,22 +40,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          notes="## SHA256
+\`${{ steps.sha.outputs.sha256 }}\`"
           gh release create "v${{ inputs.version }}" \
             --title "NanoBar v${{ inputs.version }}" \
-            --notes "## Install
-
-          \`\`\`bash
-          brew tap xeydev/tap
-          brew install nanobar
-          brew services start nanobar
-          \`\`\`
-
-          ## SHA256
-          \`${{ steps.sha.outputs.sha256 }}\`" \
+            --notes "$notes" \
             "nanobar-${{ inputs.version }}-arm64.tar.gz"
 
-      - name: Print formula snippet
+      - name: Trigger formula update
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          echo "Update homebrew-tap Formula/nanobar.rb:"
-          echo "  version \"${{ inputs.version }}\""
-          echo "  sha256 \"${{ steps.sha.outputs.sha256 }}\""
+          gh workflow run update-formula.yml \
+            --repo xeydev/homebrew-tap \
+            --field version="${{ inputs.version }}" \
+            --field sha256="${{ steps.sha.outputs.sha256 }}"
