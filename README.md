@@ -4,7 +4,7 @@ A lightweight, plugin-based status bar for macOS — pure Swift/SwiftUI, no Elec
 
 **Requires macOS 15 (Sequoia) or later**
 
-![NanoBar screenshot](docs/screenshot.png)
+![NanoBar screenshot](docs/screenshot.webp)
 
 ---
 
