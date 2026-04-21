@@ -162,9 +162,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func scheduleMouseSync() {
         guard !mouseSyncPending else { return }
         mouseSyncPending = true
-        Task { @MainActor [weak self] in
-            self?.mouseSyncPending = false
-            self?.syncMousePassThrough()
+        // DispatchQueue.main.async defers to the next RunLoop iteration, which is required for
+        // coalescing: multiple mouseMoved events within the same turn all see pending=true and
+        // return early; the deferred block runs once after they have all been processed.
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.mouseSyncPending = false
+                self.syncMousePassThrough()
+            }
         }
     }
 
