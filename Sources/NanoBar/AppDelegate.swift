@@ -7,6 +7,7 @@ import Monitors
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
     private var mouseMonitors: [Any] = []
+    private var mouseSyncPending = false
     private var fullscreenObservers: [Any] = []
     private var fullscreenCheckWork: DispatchWorkItem?
 
@@ -83,7 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleMenuBarVisibility(visible: Bool) {
-        guard Thread.isMainThread else { return }
         barPanels.forEach { $0.adjustForMenuBar(visible: visible) }
     }
 
@@ -145,16 +145,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installMouseMonitors() {
         // Global monitors may fire off the main thread; hop to @MainActor before touching state.
         let hop: @Sendable (NSEvent) -> Void = { [weak self] _ in
-            Task { @MainActor [weak self] in self?.syncMousePassThrough() }
+            Task { @MainActor [weak self] in self?.scheduleMouseSync() }
         }
         if let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: hop) {
             mouseMonitors.append(global)
         }
         if let local = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved, handler: { [weak self] event in
-            Task { @MainActor [weak self] in self?.syncMousePassThrough() }
+            Task { @MainActor [weak self] in self?.scheduleMouseSync() }
             return event
         }) {
             mouseMonitors.append(local)
+        }
+    }
+
+    /// Coalesces bursts of mouseMoved events: at most one syncMousePassThrough per runloop turn.
+    private func scheduleMouseSync() {
+        guard !mouseSyncPending else { return }
+        mouseSyncPending = true
+        Task { @MainActor [weak self] in
+            self?.mouseSyncPending = false
+            self?.syncMousePassThrough()
         }
     }
 

@@ -13,7 +13,7 @@ private final class TmuxState: ObservableObject {
     init() {
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                let count = await Task(priority: .utility) {
+                let count = await Task.detached(priority: .utility) {
                     TmuxState.readSessionCount()
                 }.value
                 if self?.sessionCount != count { self?.sessionCount = count }
