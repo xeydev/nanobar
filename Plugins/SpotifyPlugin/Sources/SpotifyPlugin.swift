@@ -26,7 +26,10 @@ private final class NowPlayingState: ObservableObject, @unchecked Sendable {
         proc.standardOutput = pipe
         proc.standardError  = Pipe()
         proc.terminationHandler = { [weak self] _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self?.start() }
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(1))
+                self?.start()
+            }
         }
         guard (try? proc.run()) != nil else { return }
         process = proc

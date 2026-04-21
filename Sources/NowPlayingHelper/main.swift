@@ -1,12 +1,21 @@
 import Foundation
 
-let h = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW)!
+guard let h = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW) else {
+    fputs("NowPlayingHelper: MediaRemote.framework unavailable\n", stderr)
+    exit(0)
+}
 
 typealias RegisterFn = @convention(c) (DispatchQueue) -> Void
 typealias GetInfoFn  = @convention(c) (DispatchQueue, AnyObject) -> Void
 
-let registerFn = unsafeBitCast(dlsym(h, "MRMediaRemoteRegisterForNowPlayingNotifications")!, to: RegisterFn.self)
-let getInfoFn  = unsafeBitCast(dlsym(h, "MRMediaRemoteGetNowPlayingInfo")!, to: GetInfoFn.self)
+guard let registerSym = dlsym(h, "MRMediaRemoteRegisterForNowPlayingNotifications"),
+      let getInfoSym   = dlsym(h, "MRMediaRemoteGetNowPlayingInfo") else {
+    fputs("NowPlayingHelper: required MediaRemote symbols not found\n", stderr)
+    exit(0)
+}
+
+let registerFn = unsafeBitCast(registerSym, to: RegisterFn.self)
+let getInfoFn  = unsafeBitCast(getInfoSym,  to: GetInfoFn.self)
 
 private let kTitle  = "kMRMediaRemoteNowPlayingInfoTitle"
 private let kArtist = "kMRMediaRemoteNowPlayingInfoArtist"

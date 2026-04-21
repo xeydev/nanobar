@@ -29,6 +29,7 @@ private final class KeyboardState: ObservableObject, @unchecked Sendable {
     }
 
     deinit {
+        updateTask?.cancel()
         let ptr = Unmanaged.passUnretained(self).toOpaque()
         CFNotificationCenterRemoveObserver(
             CFNotificationCenterGetDistributedCenter(),
@@ -44,7 +45,8 @@ private final class KeyboardState: ObservableObject, @unchecked Sendable {
     // settle before the new source is readable. Debounce: cancel previous task, wait 50ms.
     func scheduleUpdate() {
         updateTask?.cancel()
-        updateTask = Task { @MainActor in
+        updateTask = Task { @MainActor [weak self] in
+            guard let self else { return }
             try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
             let new = currentLayout()

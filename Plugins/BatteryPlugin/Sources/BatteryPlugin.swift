@@ -35,10 +35,18 @@ private final class BatteryState: ObservableObject, @unchecked Sendable {
 
     init() {
         refresh()
+        // passUnretained: BatteryState is @MainActor — deinit and the IOKit RunLoop source both
+        // operate on the main run loop, so CFRunLoopRemoveSource in deinit serializes before any
+        // further callback. passRetained would create a retain cycle (passRetained keeps ARC count
+        // ≥ 1 → deinit never runs → release in deinit unreachable → permanent leak).
         let ctx = Unmanaged.passUnretained(self).toOpaque()
         let rawSource = IOPSNotificationCreateRunLoopSource({ ctx in
             guard let ctx else { return }
-            Unmanaged<BatteryState>.fromOpaque(ctx).takeUnretainedValue().refresh()
+            // Source fires on the main run loop; DispatchQueue.main.async is redundant but
+            // makes the @MainActor bridge explicit and guards against future run-loop changes.
+            DispatchQueue.main.async {
+                Unmanaged<BatteryState>.fromOpaque(ctx).takeUnretainedValue().refresh()
+            }
         }, ctx)
         loopSource = rawSource?.takeRetainedValue()
         if let source = loopSource {
@@ -46,7 +54,10 @@ private final class BatteryState: ObservableObject, @unchecked Sendable {
         }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in MainActor.assumeIsolated { self?.refresh() } }
+        ) { [weak self] _ in
+            // queue: .main guarantees main thread; assumeIsolated bridges to @MainActor.
+            MainActor.assumeIsolated { self?.refresh() }
+        }
     }
 
     deinit {

@@ -19,5 +19,11 @@ let package = Package(
             path: "Sources",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "ClockPluginTests",
+            dependencies: ["ClockPlugin"],
+            path: "Tests",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

@@ -5,6 +5,8 @@ import NanoBarPluginAPI
 
 // MARK: - AeroSpace client
 
+private struct TimeoutError: Error {}
+
 private final class AeroSpaceClient: @unchecked Sendable {
     static let shared = AeroSpaceClient()
     private init() {}
@@ -21,19 +23,30 @@ private final class AeroSpaceClient: @unchecked Sendable {
 
     func run(args: [String]) async throws -> String {
         guard let url = Self.binaryURL else { throw CocoaError(.fileNoSuchFile) }
-        return try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            process.executableURL = url
-            process.arguments = args
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError  = Pipe()
-            process.terminationHandler = { _ in
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                continuation.resume(returning: String(data: data, encoding: .utf8) ?? "")
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    let process = Process()
+                    process.executableURL = url
+                    process.arguments = args
+                    let pipe = Pipe()
+                    process.standardOutput = pipe
+                    process.standardError  = Pipe()
+                    process.terminationHandler = { _ in
+                        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                        continuation.resume(returning: String(data: data, encoding: .utf8) ?? "")
+                    }
+                    do    { try process.run() }
+                    catch { continuation.resume(throwing: error) }
+                }
             }
-            do    { try process.run() }
-            catch { continuation.resume(throwing: error) }
+            group.addTask {
+                try await Task.sleep(for: .seconds(30))
+                throw TimeoutError()
+            }
+            let result = try await group.next() ?? ""
+            group.cancelAll()
+            return result
         }
     }
 }
@@ -121,7 +134,7 @@ private final class WorkspacesState: ObservableObject, @unchecked Sendable {
             let msg = n > 0
                 ? String(bytes: buf.prefix(n), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 : ""
-            Task { await self?.handleMessage(msg) }
+            Task { @MainActor in await self?.handleMessage(msg) }
         }
         source.resume()
         notifySource = source

@@ -44,6 +44,8 @@ public let NanoBarKitVersion: Int = 1
 // MARK: - View box
 
 /// Carries a SwiftUI `AnyView` across the plugin bundle boundary.
+// SAFETY: NanoBarViewBox is only created and accessed on the main thread.
+// @unchecked Sendable is required for ObjC bridge compatibility.
 public final class NanoBarViewBox: NSObject, @unchecked Sendable {
     public let view: AnyView
     public init(_ view: AnyView) { self.view = view }

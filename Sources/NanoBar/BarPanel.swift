@@ -13,14 +13,15 @@ final class BarPanel: NSPanel {
         self.associatedScreen = screen
         let frame    = BarPanel.barFrame(for: screen)
         let isBuiltIn = screen.localizedName.lowercased().contains("built-in")
+        let regionStore = InteractiveRegionStore()
         let rootView = BarRootView(isBuiltIn: isBuiltIn, monitorID: monitorID)
             .environmentObject(ConfigLoader.shared)
             .onPreferenceChange(InteractiveRegionKey.self) { rects in
                 Task { @MainActor in
-                    InteractiveRegionStore.shared.rects = rects
+                    regionStore.rects = rects
                 }
             }
-        let hosting  = PassThroughHostingView(rootView: rootView)
+        let hosting  = PassThroughHostingView(rootView: rootView, regionStore: regionStore)
 
         super.init(
             contentRect: frame,

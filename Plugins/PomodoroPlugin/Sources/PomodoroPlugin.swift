@@ -5,14 +5,40 @@ import NanoBarPluginAPI
 
 // MARK: - Phase
 
-private enum PomodoroPhase: Equatable {
+enum PomodoroPhase: Equatable {
     case idle, working, shortBreak, longBreak
+}
+
+extension PomodoroPhase: RawRepresentable {
+    var rawValue: String {
+        switch self {
+        case .idle:       "idle"
+        case .working:    "working"
+        case .shortBreak: "shortBreak"
+        case .longBreak:  "longBreak"
+        }
+    }
+    init?(rawValue: String) {
+        switch rawValue {
+        case "idle":       self = .idle
+        case "working":    self = .working
+        case "shortBreak": self = .shortBreak
+        case "longBreak":  self = .longBreak
+        default:           return nil
+        }
+    }
 }
 
 // MARK: - State
 
+private enum PersistenceKeys {
+    static let phase               = "com.nanobar.pomodoro.phase"
+    static let secondsRemaining    = "com.nanobar.pomodoro.secondsRemaining"
+    static let completedPomodoros  = "com.nanobar.pomodoro.completedPomodoros"
+}
+
 @MainActor
-private final class PomodoroState: ObservableObject, @unchecked Sendable {
+final class PomodoroState: ObservableObject, @unchecked Sendable {
     @Published var phase: PomodoroPhase = .idle
     @Published var secondsRemaining: Int
     @Published var completedPomodoros: Int = 0
@@ -24,23 +50,36 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
     let longBreakSecs: Int
     let pomodorosForLong: Int
 
+    private let defaults: UserDefaults
+
     nonisolated(unsafe) private var timer: DispatchSourceTimer?
+    private var timerGeneration: Int = 0
     nonisolated(unsafe) private var alertSound: NSSound?
 
-    init(workSecs: Int, shortBreakSecs: Int, longBreakSecs: Int, pomodorosForLong: Int) {
+    init(workSecs: Int, shortBreakSecs: Int, longBreakSecs: Int, pomodorosForLong: Int,
+         defaults: UserDefaults = .standard) {
         self.workSecs = workSecs
         self.shortBreakSecs = shortBreakSecs
         self.longBreakSecs = longBreakSecs
         self.pomodorosForLong = pomodorosForLong
+        self.defaults = defaults
         self.secondsRemaining = workSecs
+
+        // Restore persisted state
+        if let phaseRaw = defaults.string(forKey: PersistenceKeys.phase),
+           let savedPhase = PomodoroPhase(rawValue: phaseRaw) {
+            self.phase = savedPhase
+            self.secondsRemaining = defaults.integer(forKey: PersistenceKeys.secondsRemaining)
+            self.completedPomodoros = defaults.integer(forKey: PersistenceKeys.completedPomodoros)
+        }
     }
 
     deinit { timer?.cancel(); alertSound?.stop() }
 
     func toggle() {
         if isAlerting {
-            // Stop sound and wait — don't start timer yet
             stopAlert()
+            save()
             return
         }
         switch (phase, isRunning) {
@@ -56,6 +95,7 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
             isRunning = true
             startTimer()
         }
+        save()
     }
 
     func reset() {
@@ -65,6 +105,7 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
         secondsRemaining = workSecs
         isRunning = false
         completedPomodoros = 0
+        save()
     }
 
     func skip() {
@@ -72,7 +113,28 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
         stopAlert()
         stopTimer()
         transition()
-        stopAlert() // silence — skip should not ring
+        stopAlert() // skip should not ring
+        save()
+    }
+
+    func tick() {
+        guard isRunning else { return }
+        guard secondsRemaining > 0 else { return }
+        secondsRemaining -= 1
+        if secondsRemaining == 0 {
+            transition()
+            save()
+        } else {
+            save()
+        }
+    }
+
+    // MARK: - Private
+
+    private func save() {
+        defaults.set(phase.rawValue, forKey: PersistenceKeys.phase)
+        defaults.set(secondsRemaining, forKey: PersistenceKeys.secondsRemaining)
+        defaults.set(completedPomodoros, forKey: PersistenceKeys.completedPomodoros)
     }
 
     private func startAlert() {
@@ -90,9 +152,16 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
     }
 
     private func startTimer() {
+        stopTimer()
+        let gen = timerGeneration
         let t = DispatchSource.makeTimerSource(queue: .main)
         t.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
-        t.setEventHandler { [weak self] in self?.tick() }
+        t.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.timerGeneration == gen else { return }
+                self.tick()
+            }
+        }
         t.resume()
         timer = t
     }
@@ -100,15 +169,7 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
     private func stopTimer() {
         timer?.cancel()
         timer = nil
-    }
-
-    private func tick() {
-        guard isRunning else { return }
-        if secondsRemaining > 0 {
-            secondsRemaining -= 1
-        } else {
-            transition()
-        }
+        timerGeneration &+= 1
     }
 
     private func transition() {
@@ -125,7 +186,7 @@ private final class PomodoroState: ObservableObject, @unchecked Sendable {
                 phase = .shortBreak
                 secondsRemaining = shortBreakSecs
             }
-            isRunning = false   // wait for click
+            isRunning = false
             startAlert()
         case .shortBreak, .longBreak:
             phase = .idle
@@ -156,23 +217,11 @@ private struct SessionDots: View {
 // MARK: - View
 
 private struct PomodoroWidgetView: View {
-    @StateObject private var state: PomodoroState
+    @ObservedObject var state: PomodoroState
     let workColor: Color
     let breakColor: Color
     @State private var hovered = false
     @State private var alertOffset: CGFloat = 0
-
-    init(workSecs: Int, shortBreakSecs: Int, longBreakSecs: Int, pomodorosForLong: Int,
-         workColor: Color, breakColor: Color) {
-        _state = StateObject(wrappedValue: PomodoroState(
-            workSecs: workSecs,
-            shortBreakSecs: shortBreakSecs,
-            longBreakSecs: longBreakSecs,
-            pomodorosForLong: pomodorosForLong
-        ))
-        self.workColor = workColor
-        self.breakColor = breakColor
-    }
 
     private var iconEmoji: String {
         switch state.phase {
@@ -231,25 +280,32 @@ private struct PomodoroWidgetView: View {
 
 // MARK: - Factory
 
-private final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
-    private let config: [String: String]
-    init(config: [String: String]) { self.config = config }
+final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
+    let state: PomodoroState
+    private let workColor: Color
+    private let breakColor: Color
 
-    var widgetID: String { "pomodoro" }
-
-    @MainActor func makeViewBox() -> NanoBarViewBox {
-        let workSecs        = Int((Double(config["work"]        ?? "25") ?? 25) * 60)
-        let shortBreakSecs  = Int((Double(config["shortBreak"]  ?? "5")  ?? 5)  * 60)
-        let longBreakSecs   = Int((Double(config["longBreak"]   ?? "15") ?? 15) * 60)
+    @MainActor init(config: [String: String], defaults: UserDefaults = .standard) {
+        let workSecs         = Int((Double(config["work"]        ?? "25") ?? 25) * 60)
+        let shortBreakSecs   = Int((Double(config["shortBreak"]  ?? "5")  ?? 5)  * 60)
+        let longBreakSecs    = Int((Double(config["longBreak"]   ?? "15") ?? 15) * 60)
         let pomodorosForLong = max(1, Int(config["sessions"] ?? "4") ?? 4)
-        let workColor   = Theme.color(hex: config["workColor"])  ?? Color(red: 1.0, green: 0.420, blue: 0.420)
-        let breakColor  = Theme.color(hex: config["breakColor"]) ?? Theme.spotifyActive
-
-        return NanoBarViewBox(AnyView(PomodoroWidgetView(
+        self.workColor  = Theme.color(hex: config["workColor"])  ?? Color(red: 1.0, green: 0.420, blue: 0.420)
+        self.breakColor = Theme.color(hex: config["breakColor"]) ?? Theme.spotifyActive
+        self.state = PomodoroState(
             workSecs: workSecs,
             shortBreakSecs: shortBreakSecs,
             longBreakSecs: longBreakSecs,
             pomodorosForLong: pomodorosForLong,
+            defaults: defaults
+        )
+    }
+
+    var widgetID: String { "pomodoro" }
+
+    @MainActor func makeViewBox() -> NanoBarViewBox {
+        NanoBarViewBox(AnyView(PomodoroWidgetView(
+            state: state,
             workColor: workColor,
             breakColor: breakColor
         )))

@@ -30,7 +30,7 @@ public enum ConfigError: Error, LocalizedError, Sendable {
 // MARK: - ConfigLoader
 
 @MainActor
-public final class ConfigLoader: ObservableObject, Sendable {
+public final class ConfigLoader: ObservableObject {
     public static let shared = ConfigLoader()
 
     @Published public private(set) var config    = NanoConfig.defaults
@@ -100,7 +100,10 @@ public final class ConfigLoader: ObservableObject, Sendable {
         if dirFd >= 0 {
             let src = DispatchSource.makeFileSystemObjectSource(
                 fileDescriptor: dirFd, eventMask: .write, queue: .main)
-            src.setEventHandler { [weak self] in self?.reload() }
+            src.setEventHandler { [weak self] in
+                guard let self else { return }
+                self.reload()
+            }
             src.setCancelHandler { close(dirFd) }
             src.resume()
             dirWatchSource = src

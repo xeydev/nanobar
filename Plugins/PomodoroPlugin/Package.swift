@@ -19,5 +19,11 @@ let package = Package(
             path: "Sources",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "PomodoroPluginTests",
+            dependencies: ["PomodoroPlugin"],
+            path: "Tests",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

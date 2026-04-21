@@ -9,7 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mouseMonitors: [Any] = []
     private var fullscreenObservers: [Any] = []
     private var fullscreenCheckWork: DispatchWorkItem?
-    private var mouseSyncPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -73,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let event, let userData else { return noErr }
                 let shown    = GetEventKind(event) == UInt32(kEventMenuBarShown)
                 let delegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async { delegate.handleMenuBarVisibility(visible: shown) }
+                Task { @MainActor in delegate.handleMenuBarVisibility(visible: shown) }
                 return noErr
             },
             specs.count,
@@ -84,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleMenuBarVisibility(visible: Bool) {
+        guard Thread.isMainThread else { return }
         barPanels.forEach { $0.adjustForMenuBar(visible: visible) }
     }
 
@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installFullscreenObservers() {
         let ws = NSWorkspace.shared.notificationCenter
         let handler: @Sendable (Notification) -> Void = { [weak self] _ in
-            DispatchQueue.main.async { self?.scheduleFullscreenCheck() }
+            Task { @MainActor [weak self] in self?.scheduleFullscreenCheck() }
         }
         fullscreenObservers = [
             ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,      object: nil, queue: nil, using: handler),
@@ -112,13 +112,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Snapshot main-thread data, then do the expensive window list query off-main.
         let primaryH = NSScreen.screens.first?.frame.height ?? 0
         let targets = barPanels.map { (panel: $0, sf: $0.associatedScreen.frame) }
-        DispatchQueue.global(qos: .userInitiated).async {
-            let results = targets.map { (panel, sf) in
-                (panel, AppDelegate.screenHasFullscreenWindow(sf: sf, primaryH: primaryH))
-            }
-            DispatchQueue.main.async {
-                for (panel, hidden) in results { panel.setFullscreenHidden(hidden) }
-            }
+        Task(priority: .userInitiated) {
+            let results = await Task.detached(priority: .userInitiated) {
+                targets.map { (panel, sf) in
+                    (panel, AppDelegate.screenHasFullscreenWindow(sf: sf, primaryH: primaryH))
+                }
+            }.value
+            for (panel, hidden) in results { panel.setFullscreenHidden(hidden) }
         }
     }
 
@@ -143,31 +143,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Mouse pass-through
 
     private func installMouseMonitors() {
-        let handler: (NSEvent) -> Void = { [weak self] _ in self?.syncMousePassThrough() }
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: handler) {
+        // Global monitors may fire off the main thread; hop to @MainActor before touching state.
+        let hop: @Sendable (NSEvent) -> Void = { [weak self] _ in
+            Task { @MainActor [weak self] in self?.syncMousePassThrough() }
+        }
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: hop) {
             mouseMonitors.append(global)
         }
         if let local = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved, handler: { [weak self] event in
-            self?.syncMousePassThrough(); return event
+            Task { @MainActor [weak self] in self?.syncMousePassThrough() }
+            return event
         }) {
             mouseMonitors.append(local)
         }
     }
 
     private func syncMousePassThrough() {
-        guard !mouseSyncPending else { return }
-        mouseSyncPending = true
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.mouseSyncPending = false
-            let loc = NSEvent.mouseLocation
-            for panel in self.barPanels {
-                let windowPoint = panel.convertPoint(fromScreen: loc)
-                let interactive = panel.frame.contains(loc)
-                               && panel.contentView?.hitTest(windowPoint) != nil
-                if panel.ignoresMouseEvents == interactive {
-                    panel.ignoresMouseEvents = !interactive
-                }
+        let loc = NSEvent.mouseLocation
+        for panel in barPanels {
+            let windowPoint = panel.convertPoint(fromScreen: loc)
+            let interactive = panel.frame.contains(loc)
+                           && panel.contentView?.hitTest(windowPoint) != nil
+            if panel.ignoresMouseEvents == interactive {
+                panel.ignoresMouseEvents = !interactive
             }
         }
     }

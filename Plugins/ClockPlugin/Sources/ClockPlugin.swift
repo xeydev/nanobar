@@ -2,6 +2,15 @@ import Foundation
 import SwiftUI
 import NanoBarPluginAPI
 
+// MARK: - Timer interval
+
+/// Returns the refresh interval for the given DateFormatter format string.
+/// Formats containing lowercase "ss" (clock seconds) use a 1-second interval;
+/// all others use 30 seconds, aligning updates to the minute boundary.
+func clockTimerInterval(for format: String) -> Double {
+    format.contains("ss") ? 1.0 : 30.0
+}
+
 // MARK: - State
 
 @MainActor
@@ -22,10 +31,13 @@ private final class ClockState: ObservableObject, @unchecked Sendable {
     deinit { timer?.cancel() }
 
     private func scheduleTimer() {
+        timer?.cancel()
+        timer = nil
+        let interval = clockTimerInterval(for: formatter.dateFormat ?? "")
         let t = DispatchSource.makeTimerSource(queue: .main)
         let now = Date()
-        let secondsToNext = 30.0 - (now.timeIntervalSince1970.truncatingRemainder(dividingBy: 30.0))
-        t.schedule(wallDeadline: .now() + secondsToNext, repeating: 30.0, leeway: .milliseconds(500))
+        let secondsToNext = interval - (now.timeIntervalSince1970.truncatingRemainder(dividingBy: interval))
+        t.schedule(wallDeadline: .now() + secondsToNext, repeating: interval, leeway: .milliseconds(interval < 2 ? 10 : 500))
         t.setEventHandler { [weak self] in self?.tick() }
         t.resume()
         timer = t
