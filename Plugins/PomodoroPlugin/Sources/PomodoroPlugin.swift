@@ -9,33 +9,8 @@ enum PomodoroPhase: Equatable {
     case idle, working, shortBreak, longBreak
 }
 
-extension PomodoroPhase: RawRepresentable {
-    var rawValue: String {
-        switch self {
-        case .idle:       "idle"
-        case .working:    "working"
-        case .shortBreak: "shortBreak"
-        case .longBreak:  "longBreak"
-        }
-    }
-    init?(rawValue: String) {
-        switch rawValue {
-        case "idle":       self = .idle
-        case "working":    self = .working
-        case "shortBreak": self = .shortBreak
-        case "longBreak":  self = .longBreak
-        default:           return nil
-        }
-    }
-}
 
 // MARK: - State
-
-private enum PersistenceKeys {
-    static let phase               = "com.nanobar.pomodoro.phase"
-    static let secondsRemaining    = "com.nanobar.pomodoro.secondsRemaining"
-    static let completedPomodoros  = "com.nanobar.pomodoro.completedPomodoros"
-}
 
 @MainActor
 final class PomodoroState: ObservableObject, @unchecked Sendable {
@@ -50,28 +25,16 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
     let longBreakSecs: Int
     let pomodorosForLong: Int
 
-    private let defaults: UserDefaults
-
     nonisolated(unsafe) private var timer: DispatchSourceTimer?
     private var timerGeneration: Int = 0
     nonisolated(unsafe) private var alertSound: NSSound?
 
-    init(workSecs: Int, shortBreakSecs: Int, longBreakSecs: Int, pomodorosForLong: Int,
-         defaults: UserDefaults = .standard) {
+    init(workSecs: Int, shortBreakSecs: Int, longBreakSecs: Int, pomodorosForLong: Int) {
         self.workSecs = workSecs
         self.shortBreakSecs = shortBreakSecs
         self.longBreakSecs = longBreakSecs
         self.pomodorosForLong = pomodorosForLong
-        self.defaults = defaults
         self.secondsRemaining = workSecs
-
-        // Restore persisted state
-        if let phaseRaw = defaults.string(forKey: PersistenceKeys.phase),
-           let savedPhase = PomodoroPhase(rawValue: phaseRaw) {
-            self.phase = savedPhase
-            self.secondsRemaining = defaults.integer(forKey: PersistenceKeys.secondsRemaining)
-            self.completedPomodoros = defaults.integer(forKey: PersistenceKeys.completedPomodoros)
-        }
     }
 
     deinit { timer?.cancel(); alertSound?.stop() }
@@ -79,7 +42,6 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
     func toggle() {
         if isAlerting {
             stopAlert()
-            save()
             return
         }
         switch (phase, isRunning) {
@@ -95,7 +57,6 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
             isRunning = true
             startTimer()
         }
-        save()
     }
 
     func reset() {
@@ -105,7 +66,6 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
         secondsRemaining = workSecs
         isRunning = false
         completedPomodoros = 0
-        save()
     }
 
     func skip() {
@@ -114,7 +74,6 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
         stopTimer()
         transition()
         stopAlert() // skip should not ring
-        save()
     }
 
     func tick() {
@@ -123,19 +82,10 @@ final class PomodoroState: ObservableObject, @unchecked Sendable {
         secondsRemaining -= 1
         if secondsRemaining == 0 {
             transition()
-            save()
-        } else {
-            save()
         }
     }
 
     // MARK: - Private
-
-    private func save() {
-        defaults.set(phase.rawValue, forKey: PersistenceKeys.phase)
-        defaults.set(secondsRemaining, forKey: PersistenceKeys.secondsRemaining)
-        defaults.set(completedPomodoros, forKey: PersistenceKeys.completedPomodoros)
-    }
 
     private func startAlert() {
         isAlerting = true
@@ -285,7 +235,7 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
     private let workColor: Color
     private let breakColor: Color
 
-    @MainActor init(config: [String: String], defaults: UserDefaults = .standard) {
+    @MainActor init(config: [String: String]) {
         let workSecs         = Int((Double(config["work"]        ?? "25") ?? 25) * 60)
         let shortBreakSecs   = Int((Double(config["shortBreak"]  ?? "5")  ?? 5)  * 60)
         let longBreakSecs    = Int((Double(config["longBreak"]   ?? "15") ?? 15) * 60)
@@ -296,8 +246,7 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
             workSecs: workSecs,
             shortBreakSecs: shortBreakSecs,
             longBreakSecs: longBreakSecs,
-            pomodorosForLong: pomodorosForLong,
-            defaults: defaults
+            pomodorosForLong: pomodorosForLong
         )
     }
 

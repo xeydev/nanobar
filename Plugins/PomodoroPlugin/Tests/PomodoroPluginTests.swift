@@ -12,21 +12,13 @@ import Testing
 //
 // As a user, I want reset to fully clear the timer state,
 // so I can start fresh without leftover sounds or ticks.
-//
-// As a user, I want my timer state to survive app restarts,
-// so I don't lose progress when I relaunch NanoBar.
-
-private func freshDefaults() -> UserDefaults {
-    UserDefaults(suiteName: "com.nanobar.pomodoro.test.\(UUID())")!
-}
 
 // Convenience to build an isolated PomodoroState (no cross-test contamination)
 @MainActor
 private func makeState(workSecs: Int = 1500, shortBreakSecs: Int = 300,
                        longBreakSecs: Int = 900, pomodorosForLong: Int = 4) -> PomodoroState {
     PomodoroState(workSecs: workSecs, shortBreakSecs: shortBreakSecs,
-                  longBreakSecs: longBreakSecs, pomodorosForLong: pomodorosForLong,
-                  defaults: freshDefaults())
+                  longBreakSecs: longBreakSecs, pomodorosForLong: pomodorosForLong)
 }
 
 @MainActor
@@ -248,7 +240,7 @@ struct PomodoroFactoryTests {
 
     @Test("factory stores state as a shared property")
     func factoryHasSharedState() {
-        let factory = PomodoroWidgetFactory(config: [:], defaults: freshDefaults())
+        let factory = PomodoroWidgetFactory(config: [:])
         let s1 = factory.state
         let s2 = factory.state
         #expect(s1 === s2)
@@ -256,7 +248,7 @@ struct PomodoroFactoryTests {
 
     @Test("toggle on factory state is visible via second reference")
     func factoryStateIsShared() {
-        let factory = PomodoroWidgetFactory(config: [:], defaults: freshDefaults())
+        let factory = PomodoroWidgetFactory(config: [:])
         let s1 = factory.state
         let s2 = factory.state
         s1.toggle()
@@ -265,69 +257,3 @@ struct PomodoroFactoryTests {
     }
 }
 
-// MARK: - Persistence tests
-
-@MainActor
-@Suite("PomodoroState — UserDefaults persistence")
-struct PomodoroStatesPersistenceTests {
-
-    @Test("phase and secondsRemaining persist across init")
-    func persistsPhaseAndSeconds() {
-        let defaults = freshDefaults()
-        let state = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        state.toggle() // → working, secondsRemaining stays 1500
-
-        let restored = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        #expect(restored.phase == .working)
-        #expect(restored.secondsRemaining == 1500)
-        #expect(restored.isRunning == false) // timer never auto-restarts
-    }
-
-    @Test("completedPomodoros persists across init")
-    func persistsCompletedPomodoros() {
-        let defaults = freshDefaults()
-        let state = PomodoroState(workSecs: 1, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        state.toggle()
-        state.tick() // completes work → completedPomodoros = 1
-        #expect(state.completedPomodoros == 1)
-
-        let restored = PomodoroState(workSecs: 1, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        #expect(restored.completedPomodoros == 1)
-    }
-
-    @Test("reset clears persisted state")
-    func resetClearsPersistedState() {
-        let defaults = freshDefaults()
-        let state = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        state.toggle()
-        state.reset()
-
-        let restored = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        #expect(restored.phase == .idle)
-        #expect(restored.completedPomodoros == 0)
-        #expect(restored.secondsRemaining == 1500)
-    }
-
-    @Test("secondsRemaining after tick persists")
-    func persistsDecrementedSeconds() {
-        let defaults = freshDefaults()
-        let state = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        state.toggle()
-        state.tick() // secondsRemaining = 1499
-
-        let restored = PomodoroState(workSecs: 1500, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        #expect(restored.secondsRemaining == 1499)
-    }
-
-    @Test("isAlerting is never restored as true")
-    func alertingNotRestored() {
-        let defaults = freshDefaults()
-        let state = PomodoroState(workSecs: 1, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        state.toggle()
-        state.tick() // → shortBreak + alert
-        #expect(state.isAlerting == true)
-
-        let restored = PomodoroState(workSecs: 1, shortBreakSecs: 300, longBreakSecs: 900, pomodorosForLong: 4, defaults: defaults)
-        #expect(restored.isAlerting == false) // sound can't persist
-    }
-}
