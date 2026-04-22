@@ -32,12 +32,15 @@ public struct NanoConfig: Decodable, Sendable {
         public init() {}
 
         private enum CodingKeys: String, CodingKey {
-            case background, minHeight, cornerRadius, shadow, margin, padding, border
+            case background, minHeight, height, cornerRadius, shadow, margin, padding, border
         }
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             background   = try c.decodeIfPresent(String.self,       forKey: .background) ?? "none"
-            minHeight    = try c.decodeDoubleOrInt(forKey: .minHeight)                   ?? 30
+            // `height` is a legacy key — kept for backward compatibility with existing configs.
+            minHeight    = try c.decodeDoubleOrInt(forKey: .minHeight)
+                        ?? c.decodeDoubleOrInt(forKey: .height)
+                        ?? 30
             cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)                ?? 0
             shadow       = try c.decodeIfPresent(Bool.self,         forKey: .shadow)     ?? false
             margin       = try c.decodeIfPresent(SideInsets.self,   forKey: .margin)     ?? SideInsets()

@@ -117,7 +117,14 @@ public final class ConfigLoader: ObservableObject {
     /// Remove a TOML section (header + all content lines) from the config file.
     ///
     /// The write is immediate (no debounce) — section removal is intentional and discrete.
+    /// Any pending debounced writes for keys within this section are cancelled first so
+    /// they cannot re-create the section after it is removed.
     public func removeSection(_ section: String) {
+        let prefix = section + "."
+        for (key, item) in pendingWrites where key == section || key.hasPrefix(prefix) {
+            item.cancel()
+            pendingWrites.removeValue(forKey: key)
+        }
         let raw = (try? String(contentsOf: configURL, encoding: .utf8)) ?? ""
         writeRaw(TOMLWriter.removeSection(raw: raw, section: section))
     }

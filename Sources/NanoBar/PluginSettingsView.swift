@@ -77,7 +77,10 @@ struct PluginDetailView: View {
     private var resetSection: some View {
         Section {
             Button("Reset settings", role: .destructive) {
+                // Remove child subsections before the parent so no orphaned sections remain.
+                ConfigLoader.shared.removeSection(pillSection)
                 ConfigLoader.shared.removeSection(pluginSection)
+                pillOverrideEnabled = false
             }
             if pillOverrideEnabled {
                 Button("Reset pill override", role: .destructive) {

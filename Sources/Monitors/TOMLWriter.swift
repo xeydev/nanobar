@@ -170,6 +170,14 @@ public enum TOMLWriter {
         let s = line.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty, !s.hasPrefix("#") else { return false }
         guard s.hasPrefix("["), !s.hasPrefix("[[") else { return false }
-        return !s.contains("=")
+        // Strip inline comment before checking for `=` so that
+        // `[bar]  # key = value` is not misidentified as a non-header.
+        let commentFree: Substring
+        if let hashIdx = s.firstIndex(of: "#") {
+            commentFree = s[s.startIndex..<hashIdx]
+        } else {
+            commentFree = s[s.startIndex...]
+        }
+        return !commentFree.contains("=")
     }
 }
