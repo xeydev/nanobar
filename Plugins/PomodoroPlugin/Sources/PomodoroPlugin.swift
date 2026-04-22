@@ -236,12 +236,12 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
     private let breakColor: Color
 
     @MainActor init(config: [String: String]) {
-        let workSecs         = Int((Double(config["work"]        ?? "25") ?? 25) * 60)
-        let shortBreakSecs   = Int((Double(config["shortBreak"]  ?? "5")  ?? 5)  * 60)
-        let longBreakSecs    = Int((Double(config["longBreak"]   ?? "15") ?? 15) * 60)
-        let pomodorosForLong = max(1, Int(config["sessions"] ?? "4") ?? 4)
-        self.workColor  = Theme.color(hex: config["workColor"])  ?? Theme.pomodoroWorkColor
-        self.breakColor = Theme.color(hex: config["breakColor"]) ?? Theme.spotifyActive
+        let workSecs         = Int((Double(config["work"]!)        ?? 25) * 60)
+        let shortBreakSecs   = Int((Double(config["shortBreak"]!)  ?? 5)  * 60)
+        let longBreakSecs    = Int((Double(config["longBreak"]!)   ?? 15) * 60)
+        let pomodorosForLong = max(1, Int(config["sessions"]!) ?? 4)
+        self.workColor  = Theme.color(hex: config["workColor"]!)  ?? Theme.pomodoroWorkColor
+        self.breakColor = Theme.color(hex: config["breakColor"]!) ?? Theme.pomodoroBreakColor
         self.state = PomodoroState(
             workSecs: workSecs,
             shortBreakSecs: shortBreakSecs,
@@ -267,7 +267,7 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class PomodoroPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "pomodoro" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(PomodoroWidgetFactory(config: config))
+        registry.register(PomodoroWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Pomodoro" }

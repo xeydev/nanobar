@@ -87,7 +87,8 @@ private struct PillDetailView: View {
 
     var body: some View {
         Form {
-            PillConfigEditor(section: "pill", current: loader.config.pill)
+            PillConfigEditor(section: "pill", current: loader.config.pill,
+                             defaults: NanoConfig.PillConfig())
             Section {
                 Button("Reset to defaults", role: .destructive) {
                     ConfigLoader.shared.removeSection("pill")

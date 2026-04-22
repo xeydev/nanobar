@@ -87,7 +87,7 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var accentColor: Color {
-        Theme.color(hex: config["color"]) ?? Theme.tmuxColor
+        Theme.color(hex: config["color"]!) ?? Theme.tmuxColor
     }
 }
 
@@ -98,7 +98,7 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class TmuxPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "tmux" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(TmuxWidgetFactory(config: config))
+        registry.register(TmuxWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Tmux" }

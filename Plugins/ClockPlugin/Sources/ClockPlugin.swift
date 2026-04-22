@@ -89,8 +89,8 @@ private final class ClockWidgetFactory: NSObject, NanoBarWidgetFactory {
     var widgetID: String { "clock" }
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
-        let format = config["format"] ?? "EEE dd MMM HH:mm"
-        let color  = Theme.color(hex: config["color"]) ?? Theme.calendarColor
+        let format = config["format"]!
+        let color  = Theme.color(hex: config["color"]!) ?? Theme.calendarColor
         return NanoBarViewBox(AnyView(ClockWidgetView(format: format, color: color)))
     }
 }
@@ -101,7 +101,7 @@ private final class ClockWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class ClockPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "clock" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(ClockWidgetFactory(config: config))
+        registry.register(ClockWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Clock" }

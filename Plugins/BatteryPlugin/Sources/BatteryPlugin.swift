@@ -126,10 +126,10 @@ private final class BatteryWidgetFactory: NSObject, NanoBarWidgetFactory {
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
         let colors = (
-            normal: Theme.color(hex: config["color"])     ?? Theme.batteryGreen,
-            warn:   Theme.color(hex: config["warnColor"]) ?? Theme.batteryYellow,
-            med:    Theme.color(hex: config["medColor"])  ?? Theme.batteryOrange,
-            low:    Theme.color(hex: config["lowColor"])  ?? Theme.batteryRed
+            normal: Theme.color(hex: config["color"]!)     ?? Theme.batteryGreen,
+            warn:   Theme.color(hex: config["warnColor"]!) ?? Theme.batteryYellow,
+            med:    Theme.color(hex: config["medColor"]!)  ?? Theme.batteryOrange,
+            low:    Theme.color(hex: config["lowColor"]!)  ?? Theme.batteryRed
         )
         return NanoBarViewBox(AnyView(BatteryWidgetView(colors: colors)))
     }
@@ -141,7 +141,7 @@ private final class BatteryWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class BatteryPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "battery" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(BatteryWidgetFactory(config: config))
+        registry.register(BatteryWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Battery" }

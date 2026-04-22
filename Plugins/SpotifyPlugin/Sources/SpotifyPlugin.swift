@@ -192,7 +192,7 @@ private final class SpotifyWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var activeColor: Color {
-        Theme.color(hex: config["activeColor"]) ?? Theme.spotifyActive
+        Theme.color(hex: config["activeColor"]!) ?? Theme.spotifyActive
     }
 }
 
@@ -202,7 +202,7 @@ private final class SpotifyWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class SpotifyPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "now_playing" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(SpotifyWidgetFactory(config: config))
+        registry.register(SpotifyWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Now Playing" }

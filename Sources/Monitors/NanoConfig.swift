@@ -148,51 +148,52 @@ public struct NanoConfig: Decodable, Sendable {
         right  = ["keyboard", "volume", "battery", "clock"]
 
         # ─── Bar appearance ───────────────────────────────────────────────────────────
+        # Uncomment and edit any key to override its default value.
 
-        [bar]
-        background   = "none"    # none | blur | color:#RRGGBBAA
-        minHeight    = 30
-        cornerRadius = 0
-        shadow       = false
-
-        # margin: gap between screen edge and bar background
-        # scalar sets all sides; inline table allows per-side overrides
-        margin  = 0
-        # margin = { all = 6, top = 4, bottom = 4 }
-
-        # padding: gap between bar background edge and pill widgets
-        padding = 8
-        # padding = { all = 8, left = 12, right = 12 }
-
-        # border: false | true | { width = 1.0, color = "#FFFFFF59" }
-        border  = false
+        # [bar]
+        # background   = "none"    # none | blur | color:#RRGGBBAA
+        # minHeight    = 30
+        # cornerRadius = 0
+        # shadow       = false
+        #
+        # # margin: gap between screen edge and bar background
+        # # scalar sets all sides; inline table allows per-side overrides
+        # margin  = 0
+        # # margin = { all = 6, top = 4, bottom = 4 }
+        #
+        # # padding: gap between bar background edge and pill widgets
+        # padding = 8
+        # # padding = { all = 8, left = 12, right = 12 }
+        #
+        # # border: false | true | { width = 1.0, color = "#FFFFFF59" }
+        # border  = false
 
         # ─── Pill appearance ──────────────────────────────────────────────────────────
 
-        [pill]
-        style        = "liquidGlass"   # liquidGlass | solid | none
-        height       = 30
-        cornerRadius = 15
-        border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
+        # [pill]
+        # style        = "liquidGlass"   # liquidGlass | solid | none
+        # height       = 30
+        # cornerRadius = 15
+        # border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
 
-        [pill.liquidGlass]
-        # Glass effect for each interaction state.
-        # effect: "regular" | "clear" | "identity"
-        # tint:   "#RRGGBBAA" hex, or omit for no tint
-        defaultEffect = "clear"
-        # defaultTint   = "#FFFFFF20"
+        # [pill.liquidGlass]
+        # # Glass effect for each interaction state.
+        # # effect: "regular" | "clear" | "identity"
+        # # tint:   "#RRGGBBAA" hex, or omit for no tint
+        # defaultEffect = "clear"
+        # # defaultTint   = "#FFFFFF20"
+        #
+        # hoverEffect   = "regular"
+        # hoverTint     = "#FFFFFF30"
+        #
+        # toggledEffect = "regular"
+        # toggledTint   = "#FFFFFF30"
 
-        hoverEffect   = "regular"
-        hoverTint     = "#FFFFFF30"
-
-        toggledEffect = "regular"
-        toggledTint   = "#FFFFFF30"
-
-        [pill.liquidGlass.blur]
-        # Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).
-        material = "regular"   # regular | thin | ultraThin
-        specular = true        # white gradient overlay
-        shadow   = true        # macOS 26 glass manages its own shadow
+        # [pill.liquidGlass.blur]
+        # # Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).
+        # material = "regular"   # regular | thin | ultraThin
+        # specular = true        # white gradient overlay
+        # shadow   = true        # macOS 26 glass manages its own shadow
 
         # ─── Standard plugin settings (optional overrides) ────────────────────────────
         # Standard plugins are auto-loaded from the Plugins/ directory — no bundle

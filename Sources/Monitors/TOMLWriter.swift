@@ -77,13 +77,77 @@ public enum TOMLWriter {
                 lines.insert(newLine, at: insertAt)
             }
         } else {
-            // Section missing — append at end of file
-            if lines.last?.isEmpty == false { lines.append("") }
-            lines.append(header)
-            lines.append("\(key) = \(value.tomlLiteral)")
+            // Section missing — insert at hierarchical position to keep sections sorted.
+            let newLines = [header, "\(key) = \(value.tomlLiteral)"]
+            let insertAt = hierarchicalInsertionPoint(lines: lines, newSection: section)
+            if insertAt == lines.count {
+                // Append at end
+                if lines.last?.isEmpty == false { lines.append("") }
+                lines.append(contentsOf: newLines)
+            } else {
+                // Insert before the section at insertAt.
+                // Add a leading blank to separate from the content above, and a trailing
+                // blank if the immediately following line is non-blank (owns no separator yet).
+                var block = [""] + newLines
+                if !lines[insertAt].trimmingCharacters(in: .whitespaces).isEmpty {
+                    block.append("")
+                }
+                lines.insert(contentsOf: block, at: insertAt)
+            }
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Remove key
+
+    /// Remove a single key from a named section.
+    ///
+    /// If removing the key leaves the section with no remaining content (no key-value
+    /// lines, no comments — only blank lines), the section header is also removed via
+    /// `removeSection`. Comment lines are considered content and keep the header alive.
+    ///
+    /// - Returns: The updated document, or the input unchanged if the section or key is not found.
+    public static func removeKey(raw: String, section: String, key: String) -> String {
+        var lines = raw.components(separatedBy: "\n")
+        let header = "[\(section)]"
+
+        guard let start = lines.firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces) == header
+        }) else {
+            return raw  // section not found — no-op
+        }
+
+        let contentStart = start + 1
+        let contentEnd   = sectionEnd(lines: lines, after: contentStart)
+
+        guard let keyIdx = findKeyLine(in: lines, range: contentStart..<contentEnd, key: key) else {
+            return raw  // key not found — no-op
+        }
+
+        lines.remove(at: keyIdx)
+
+        // After removal the section content ends one line earlier.
+        let newContentEnd = contentEnd - 1
+
+        // Any non-blank line (including comments) counts as content worth keeping.
+        let hasContent = (contentStart..<newContentEnd).contains { i in
+            !lines[i].trimmingCharacters(in: .whitespaces).isEmpty
+        }
+
+        if hasContent {
+            // Section still has content — collapse any triple-blank runs.
+            let joined = lines.joined(separator: "\n")
+            var prev = ""; var current = joined
+            while current != prev {
+                prev = current
+                current = current.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+            }
+            return current
+        } else {
+            // Section is now empty — remove header and surrounding blank lines too.
+            return removeSection(raw: lines.joined(separator: "\n"), section: section)
+        }
     }
 
     // MARK: - Remove section
@@ -128,6 +192,39 @@ public enum TOMLWriter {
     }
 
     // MARK: - Private helpers
+
+    /// Line index at which a new `[newSection]` header should be inserted so that
+    /// all section headers remain in lexicographic order by their dot-path.
+    /// Returns `lines.count` when the new section belongs at the end.
+    private static func hierarchicalInsertionPoint(lines: [String], newSection: String) -> Int {
+        for i in 0..<lines.count {
+            guard isSectionHeader(lines[i]) else { continue }
+            if sectionName(from: lines[i]) > newSection {
+                // Insert before the blank-line run that precedes this header.
+                return blankRunStart(lines: lines, before: i)
+            }
+        }
+        return lines.count
+    }
+
+    /// Extracts the section path from a header line, e.g. `"[foo.bar]  # note"` → `"foo.bar"`.
+    private static func sectionName(from line: String) -> String {
+        let s = line.trimmingCharacters(in: .whitespaces)
+        guard let open = s.firstIndex(of: "["),
+              let close = s[s.index(after: open)...].firstIndex(of: "]") else { return "" }
+        return String(s[s.index(after: open)..<close]).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Returns the index of the first blank line in the run of blank lines immediately
+    /// before `headerIdx`, so an inserted block lands before any gap that belongs to the
+    /// following section rather than after the previous section's content.
+    private static func blankRunStart(lines: [String], before headerIdx: Int) -> Int {
+        var i = headerIdx
+        while i > 0 && lines[i - 1].trimmingCharacters(in: .whitespaces).isEmpty {
+            i -= 1
+        }
+        return i
+    }
 
     /// Index of the first section-header line at or after `after`, or `lines.count`.
     private static func sectionEnd(lines: [String], after start: Int) -> Int {

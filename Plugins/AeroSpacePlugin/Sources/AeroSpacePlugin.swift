@@ -479,7 +479,7 @@ private final class AeroSpaceWidgetFactory: NSObject, NanoBarWidgetFactory {
     var widgetID: String { "workspaces" }
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
-        let mode = WorkspaceMode(rawValue: config["mode"] ?? "") ?? .clampAndExpand
+        let mode = WorkspaceMode(rawValue: config["mode"]!) ?? .clampAndExpand
         return NanoBarViewBox(AnyView(WorkspaceBarView(mode: mode)))
     }
 }
@@ -490,7 +490,7 @@ private final class AeroSpaceWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class AeroSpacePlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "workspaces" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(AeroSpaceWidgetFactory(config: config))
+        registry.register(AeroSpaceWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Workspaces" }

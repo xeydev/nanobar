@@ -106,7 +106,7 @@ private final class KeyboardWidgetFactory: NSObject, NanoBarWidgetFactory {
     var widgetID: String { "keyboard" }
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
-        let color = Theme.color(hex: config["color"]) ?? Theme.keyboardColor
+        let color = Theme.color(hex: config["color"]!) ?? Theme.keyboardColor
         return NanoBarViewBox(AnyView(KeyboardWidgetView(color: color)))
     }
 }
@@ -117,7 +117,7 @@ private final class KeyboardWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class KeyboardPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "keyboard" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(KeyboardWidgetFactory(config: config))
+        registry.register(KeyboardWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Keyboard" }

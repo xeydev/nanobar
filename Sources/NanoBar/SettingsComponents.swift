@@ -52,11 +52,15 @@ struct ValueField: View {
 
 /// Edits a `SideInsets` value with an "Equal on all sides" toggle.
 /// When equal: single ValueField; when not equal: four ValueFields (top/right/bottom/left).
+///
+/// Pass `defaultInsets` to enable write-skip-default: if the written value equals the default
+/// the key is removed from config rather than written.
 struct SideInsetsEditor: View {
     let label: String
     let section: String
     let key: String
     let current: SideInsets
+    var defaultInsets: SideInsets? = nil
 
     @State private var allEqual: Bool = true
     @State private var top:    Double = 0
@@ -103,7 +107,11 @@ struct SideInsetsEditor: View {
     }
 
     private func writeScalar(_ v: Double) {
-        ConfigLoader.shared.write(section: section, key: key, value: .integer(Int(v)))
+        if let def = defaultInsets, SideInsets(all: v) == def {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+        } else {
+            ConfigLoader.shared.write(section: section, key: key, value: .integer(Int(v)))
+        }
     }
 
     private func writeTableCurrent() {
@@ -111,6 +119,11 @@ struct SideInsetsEditor: View {
     }
 
     private func writeTable(top: Double, right: Double, bottom: Double, left: Double) {
+        if let def = defaultInsets,
+           top == def.top && right == def.right && bottom == def.bottom && left == def.left {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+            return
+        }
         let t = Int(top), r = Int(right), b = Int(bottom), l = Int(left)
         let raw = "{ top = \(t), right = \(r), bottom = \(b), left = \(l) }"
         ConfigLoader.shared.write(section: section, key: key, value: .rawLiteral(raw))
@@ -120,10 +133,14 @@ struct SideInsetsEditor: View {
 // MARK: - BorderEditor
 
 /// Edits a `BorderConfig` with enable toggle, adaptive toggle, width ValueField, and ColorPicker.
+///
+/// Pass `defaultBorder` to enable write-skip-default: if the written value equals the default
+/// the key is removed from config rather than written.
 struct BorderEditor: View {
     let section: String
     let key: String
     let current: BorderConfig
+    var defaultBorder: BorderConfig? = nil
 
     @State private var enabled:  Bool   = false
     @State private var adaptive: Bool   = true
@@ -188,12 +205,22 @@ struct BorderEditor: View {
     }
 
     private func writeBool(_ b: Bool) {
-        ConfigLoader.shared.write(section: section, key: key, value: .bool(b))
+        let value: BorderConfig = b ? .auto : .disabled
+        if let def = defaultBorder, value == def {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+        } else {
+            ConfigLoader.shared.write(section: section, key: key, value: .bool(b))
+        }
     }
 
     private func writeCustom() {
-        let raw = "{ width = \(width), color = \"\(colorHex)\" }"
-        ConfigLoader.shared.write(section: section, key: key, value: .rawLiteral(raw))
+        let value = BorderConfig.custom(width: width, color: colorHex)
+        if let def = defaultBorder, value == def {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+        } else {
+            let raw = "{ width = \(width), color = \"\(colorHex)\" }"
+            ConfigLoader.shared.write(section: section, key: key, value: .rawLiteral(raw))
+        }
     }
 }
 
@@ -230,9 +257,15 @@ struct SettingsFieldRow: View {
     }
 
     /// Update local state immediately and schedule the debounced disk write.
+    /// If the new value matches the schema default, remove the key instead of writing it,
+    /// keeping the config file free of redundant default entries.
     private func commit(_ str: String) {
         localValue = str
-        ConfigLoader.shared.write(section: "plugins.\(pluginID)", key: field.key, value: .string(str))
+        if str == field.defaultValue {
+            ConfigLoader.shared.removeKey(section: "plugins.\(pluginID)", key: field.key)
+        } else {
+            ConfigLoader.shared.write(section: "plugins.\(pluginID)", key: field.key, value: .string(str))
+        }
     }
 
     // MARK: - Control

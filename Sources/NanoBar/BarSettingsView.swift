@@ -17,9 +17,12 @@ struct BarDetailView: View {
     var body: some View {
         Form {
             appearanceSection
-            SideInsetsEditor(label: "Margin",  section: "bar", key: "margin",  current: loader.config.bar.margin)
-            SideInsetsEditor(label: "Padding", section: "bar", key: "padding", current: loader.config.bar.padding)
-            BorderEditor(section: "bar", key: "border", current: loader.config.bar.border)
+            SideInsetsEditor(label: "Margin",  section: "bar", key: "margin",  current: loader.config.bar.margin,
+                             defaultInsets: NanoConfig.BarConfig().margin)
+            SideInsetsEditor(label: "Padding", section: "bar", key: "padding", current: loader.config.bar.padding,
+                             defaultInsets: NanoConfig.BarConfig().padding)
+            BorderEditor(section: "bar", key: "border", current: loader.config.bar.border,
+                         defaultBorder: NanoConfig.BarConfig().border)
             Section {
                 Button("Reset to defaults", role: .destructive) {
                     ConfigLoader.shared.removeSection("bar")
@@ -42,11 +45,11 @@ struct BarDetailView: View {
         Section("Appearance") {
             backgroundRow
             ValueField(label: "Min Height",     value: $minHeight,    range: 20...60, step: 1)
-                .onChange(of: minHeight)    { _, v in write("minHeight",    .double(v)) }
+                .onChange(of: minHeight)    { _, v in write("minHeight",    .double(v), isDefault: v == NanoConfig.BarConfig().minHeight) }
             ValueField(label: "Corner radius", value: $cornerRadius, range: 0...30,  step: 1)
-                .onChange(of: cornerRadius) { _, v in write("cornerRadius", .double(v)) }
+                .onChange(of: cornerRadius) { _, v in write("cornerRadius", .double(v), isDefault: v == NanoConfig.BarConfig().cornerRadius) }
             Toggle("Shadow", isOn: $shadow)
-                .onChange(of: shadow) { _, v in write("shadow", .bool(v)) }
+                .onChange(of: shadow) { _, v in write("shadow", .bool(v), isDefault: v == NanoConfig.BarConfig().shadow) }
         }
     }
 
@@ -57,9 +60,10 @@ struct BarDetailView: View {
             Text("Color").tag("color")
         }
         .onChange(of: bgMode) { _, mode in
+            let def = NanoConfig.BarConfig().background
             switch mode {
             case "color": write("background", .string("color:\(bgColorHex)"))
-            default:      write("background", .string(mode))
+            default:      write("background", .string(mode), isDefault: mode == def)
             }
         }
 
@@ -79,8 +83,12 @@ struct BarDetailView: View {
 
     // MARK: - Helpers
 
-    private func write(_ key: String, _ value: TOMLValue) {
-        ConfigLoader.shared.write(section: "bar", key: key, value: value)
+    private func write(_ key: String, _ value: TOMLValue, isDefault: Bool = false) {
+        if isDefault {
+            ConfigLoader.shared.removeKey(section: "bar", key: key)
+        } else {
+            ConfigLoader.shared.write(section: "bar", key: key, value: value)
+        }
     }
 
     private func syncFromConfig() {

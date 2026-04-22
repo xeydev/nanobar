@@ -114,6 +114,25 @@ public final class ConfigLoader: ObservableObject {
         writeRaw(patched)
     }
 
+    /// Remove a single key from a section in the config file, using the same 300 ms debounce
+    /// as `write`. If the key's value equals the schema default the caller should prefer this
+    /// over `write` so the config file stays clean of redundant entries.
+    ///
+    /// Cancels any pending write for the same `section+key` slot before scheduling the removal,
+    /// so a rapid write→reset sequence always lands in the correct final state.
+    public func removeKey(section: String, key: String) {
+        let dedupKey = "\(section).\(key)"
+        pendingWrites[dedupKey]?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingWrites.removeValue(forKey: dedupKey)
+            let raw = (try? String(contentsOf: self.configURL, encoding: .utf8)) ?? ""
+            self.writeRaw(TOMLWriter.removeKey(raw: raw, section: section, key: key))
+        }
+        pendingWrites[dedupKey] = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+    }
+
     /// Remove a TOML section (header + all content lines) from the config file.
     ///
     /// The write is immediate (no debounce) — section removal is intentional and discrete.

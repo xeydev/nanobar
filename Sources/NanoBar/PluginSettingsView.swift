@@ -62,7 +62,7 @@ struct PluginDetailView: View {
                             value: .string(loader.config.pill.style)
                         )
                     } else {
-                        ConfigLoader.shared.removeSection(pillSection)
+                        removePillSectionTree()
                     }
                 }
 

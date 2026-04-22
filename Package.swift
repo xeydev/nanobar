@@ -17,7 +17,10 @@ let package = Package(
         ),
         .testTarget(
             name: "MonitorsTests",
-            dependencies: ["Monitors"],
+            dependencies: [
+                "Monitors",
+                .product(name: "NanoBarPluginAPI", package: "NanoBarPluginAPI"),
+            ],
             path: "Tests/MonitorsTests",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),

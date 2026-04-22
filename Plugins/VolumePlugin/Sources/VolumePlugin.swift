@@ -241,7 +241,7 @@ private final class VolumeWidgetFactory: NSObject, NanoBarWidgetFactory {
     var widgetID: String { "volume" }
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
-        let color = Theme.color(hex: config["color"]) ?? Theme.volumeColor
+        let color = Theme.color(hex: config["color"]!) ?? Theme.volumeColor
         return NanoBarViewBox(AnyView(VolumeWidgetView(color: color)))
     }
 }
@@ -252,7 +252,7 @@ private final class VolumeWidgetFactory: NSObject, NanoBarWidgetFactory {
 public final class VolumePlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "volume" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
-        registry.register(VolumeWidgetFactory(config: config))
+        registry.register(VolumeWidgetFactory(config: resolvedSettings(config)))
     }
 
     public var displayName: String { "Volume" }

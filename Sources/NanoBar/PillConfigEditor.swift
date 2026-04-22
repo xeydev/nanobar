@@ -9,9 +9,13 @@ import NanoBarPluginAPI
 ///
 /// `section`  — the TOML section path to write into (e.g. `"pill"` or `"plugins.clock.pill"`).
 /// `current`  — the pill config to display (may be the global default when used as an override).
+/// `defaults` — when non-nil, keys whose value matches the corresponding default are removed
+///              from config instead of written (write-skip-default). Pass nil for per-plugin
+///              overrides where every change should always be persisted.
 struct PillConfigEditor: View {
     let section: String
     let current: NanoConfig.PillConfig
+    var defaults: NanoConfig.PillConfig? = nil
 
     @ObservedObject private var loader = ConfigLoader.shared
 
@@ -45,29 +49,30 @@ struct PillConfigEditor: View {
                     Text("Solid").tag("solid")
                     Text("None").tag("none")
                 }
-                .onChange(of: localStyle) { _, v in write("style", .string(v)) }
+                .onChange(of: localStyle) { _, v in write("style", .string(v), isDefault: v == defaults?.style) }
             }
 
             Section("Dimensions") {
                 ValueField(label: "Height",       value: $localHeight,       range: 16...60, step: 1)
-                    .onChange(of: localHeight)       { _, v in write("height",       .double(v)) }
+                    .onChange(of: localHeight)       { _, v in write("height",       .double(v), isDefault: v == defaults?.height) }
                 ValueField(label: "Corner radius", value: $localCornerRadius, range: 0...30,  step: 1)
-                    .onChange(of: localCornerRadius) { _, v in write("cornerRadius", .double(v)) }
+                    .onChange(of: localCornerRadius) { _, v in write("cornerRadius", .double(v), isDefault: v == defaults?.cornerRadius) }
             }
 
-            BorderEditor(section: section, key: "border", current: live.border)
+            BorderEditor(section: section, key: "border", current: live.border,
+                         defaultBorder: defaults?.border)
 
             if localStyle == "liquidGlass" {
                 Section("Liquid Glass") {
                     glassRow(label: "Default effect",
-                             effect: $defaultEffect, effectKey: "defaultEffect",
-                             tint:   $defaultTint,   tintKey:   "defaultTint")
+                             effect: $defaultEffect, effectKey: "defaultEffect", defaultEffect: defaults?.liquidGlass.defaultEffect,
+                             tint:   $defaultTint,   tintKey:   "defaultTint",   defaultTint: defaults?.liquidGlass.defaultTint ?? "")
                     glassRow(label: "Hover effect",
-                             effect: $hoverEffect,   effectKey: "hoverEffect",
-                             tint:   $hoverTint,     tintKey:   "hoverTint")
+                             effect: $hoverEffect,   effectKey: "hoverEffect",   defaultEffect: defaults?.liquidGlass.hoverEffect,
+                             tint:   $hoverTint,     tintKey:   "hoverTint",     defaultTint: defaults?.liquidGlass.hoverTint)
                     glassRow(label: "Toggled effect",
-                             effect: $toggledEffect, effectKey: "toggledEffect",
-                             tint:   $toggledTint,   tintKey:   "toggledTint")
+                             effect: $toggledEffect, effectKey: "toggledEffect", defaultEffect: defaults?.liquidGlass.toggledEffect,
+                             tint:   $toggledTint,   tintKey:   "toggledTint",   defaultTint: defaults?.liquidGlass.toggledTint)
                 }
 
                 Section("Blur Fallback (pre-macOS 26)") {
@@ -77,15 +82,18 @@ struct PillConfigEditor: View {
                         Text("Ultra Thin").tag("ultraThin")
                     }
                     .onChange(of: blurMaterial) { _, v in
-                        ConfigLoader.shared.write(section: blurPath, key: "material", value: .string(v))
+                        writeSection(blurPath, key: "material", value: .string(v),
+                                     isDefault: v == defaults?.liquidGlass.blur.material)
                     }
                     Toggle("Specular highlight", isOn: $blurSpecular)
                         .onChange(of: blurSpecular) { _, v in
-                            ConfigLoader.shared.write(section: blurPath, key: "specular", value: .bool(v))
+                            writeSection(blurPath, key: "specular", value: .bool(v),
+                                         isDefault: v == defaults?.liquidGlass.blur.specular)
                         }
                     Toggle("Drop shadow", isOn: $blurShadow)
                         .onChange(of: blurShadow) { _, v in
-                            ConfigLoader.shared.write(section: blurPath, key: "shadow", value: .bool(v))
+                            writeSection(blurPath, key: "shadow", value: .bool(v),
+                                         isDefault: v == defaults?.liquidGlass.blur.shadow)
                         }
                 }
             }
@@ -98,8 +106,8 @@ struct PillConfigEditor: View {
 
     @ViewBuilder
     private func glassRow(label: String,
-                           effect: Binding<String>, effectKey: String,
-                           tint:   Binding<String>, tintKey:   String) -> some View {
+                           effect: Binding<String>, effectKey: String, defaultEffect: String?,
+                           tint:   Binding<String>, tintKey:   String, defaultTint: String?) -> some View {
         LabeledContent(label) {
             HStack {
                 Picker("", selection: effect) {
@@ -110,7 +118,8 @@ struct PillConfigEditor: View {
                 .labelsHidden()
                 .frame(width: 120)
                 .onChange(of: effect.wrappedValue) { _, v in
-                    ConfigLoader.shared.write(section: glassSection, key: effectKey, value: .string(v))
+                    writeSection(glassSection, key: effectKey, value: .string(v),
+                                 isDefault: v == defaultEffect)
                 }
 
                 ColorPicker("", selection: Binding(
@@ -118,7 +127,8 @@ struct PillConfigEditor: View {
                     set: { color in
                         let hex = color.toHex8() ?? "#FFFFFF00"
                         tint.wrappedValue = hex
-                        ConfigLoader.shared.write(section: glassSection, key: tintKey, value: .string(hex))
+                        writeSection(glassSection, key: tintKey, value: .string(hex),
+                                     isDefault: hex == defaultTint)
                     }
                 ), supportsOpacity: true)
                 .labelsHidden()
@@ -129,8 +139,20 @@ struct PillConfigEditor: View {
 
     // MARK: - Helpers
 
-    private func write(_ key: String, _ value: TOMLValue) {
-        ConfigLoader.shared.write(section: section, key: key, value: value)
+    private func write(_ key: String, _ value: TOMLValue, isDefault: Bool = false) {
+        if isDefault, defaults != nil {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+        } else {
+            ConfigLoader.shared.write(section: section, key: key, value: value)
+        }
+    }
+
+    private func writeSection(_ section: String, key: String, value: TOMLValue, isDefault: Bool = false) {
+        if isDefault, defaults != nil {
+            ConfigLoader.shared.removeKey(section: section, key: key)
+        } else {
+            ConfigLoader.shared.write(section: section, key: key, value: value)
+        }
     }
 
     /// Populate local state from a PillConfig (on appear and on external reload).

@@ -61,3 +61,21 @@ public protocol NanoBarPluginSettingsProvider {
     /// Ordered list of configurable fields. The Settings UI generates one row per field.
     func settingsSchema() -> [SettingsField]
 }
+
+public extension NanoBarPluginSettingsProvider {
+    /// Merge schema defaults into a raw config dict so factories always receive every key.
+    ///
+    /// Keys present in `raw` are preserved as-is. Keys absent from `raw` are filled with
+    /// the `defaultValue` from the matching ``SettingsField``. Extra keys in `raw` that have
+    /// no corresponding field are passed through unchanged.
+    ///
+    /// This is the single source of truth for plugin default values — factories call this
+    /// and can then safely force-unwrap `config["key"]` without carrying duplicate fallbacks.
+    func resolvedSettings(_ raw: [String: String]) -> [String: String] {
+        var resolved = raw
+        for field in settingsSchema() where resolved[field.key] == nil {
+            resolved[field.key] = field.defaultValue
+        }
+        return resolved
+    }
+}
