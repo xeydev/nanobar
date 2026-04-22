@@ -114,9 +114,14 @@ private final class KeyboardWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(KeyboardPlugin)
-public final class KeyboardPlugin: NSObject, NanoBarPluginEntry {
+public final class KeyboardPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "keyboard" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(KeyboardWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Keyboard" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: Theme.keyboardColor.toHex8() ?? ""),
+    ]}
 }

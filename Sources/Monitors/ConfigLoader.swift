@@ -6,6 +6,7 @@ import UserNotifications
 
 public enum ConfigError: Error, LocalizedError, Sendable {
     case fileNotReadable(String)
+    case fileNotWritable(String)
     case parseError(String)
     case bundleNotFound(path: String)
     case invalidPrincipalClass(path: String)
@@ -15,6 +16,8 @@ public enum ConfigError: Error, LocalizedError, Sendable {
         switch self {
         case .fileNotReadable(let path):
             return "Cannot read config file at \(path)"
+        case .fileNotWritable(let path):
+            return "Cannot write config file at \(path)"
         case .parseError(let msg):
             return "Config parse error: \(msg)"
         case .bundleNotFound(let path):
@@ -48,6 +51,9 @@ public final class ConfigLoader: ObservableObject {
     private var fileWatchSource: DispatchSourceFileSystemObject?
     private var lastNotifiedError: String?
 
+    /// Pending debounced write tasks keyed by `"section.key"`.
+    private var pendingWrites: [String: DispatchWorkItem] = [:]
+
     private init() {}
 
     // MARK: - Public interface
@@ -78,6 +84,53 @@ public final class ConfigLoader: ObservableObject {
             onReload?()
         } catch {
             report(.parseError(error.localizedDescription))
+        }
+    }
+
+    // MARK: - Write path
+
+    /// Patch a single key in the config file using a 300 ms debounce per `section+key`.
+    ///
+    /// - Parameters:
+    ///   - section: TOML section path, e.g. `"plugins.clock"`, `"bar"`, `"plugins.clock.pill"`.
+    ///   - key:     The key to update within that section.
+    ///   - value:   The new value. Use `.string` for plugin settings (always stored quoted).
+    ///              Use `.integer`/`.double`/`.bool` for bar/pill numeric and boolean fields.
+    public func write(section: String, key: String, value: TOMLValue) {
+        let dedupKey = "\(section).\(key)"
+        pendingWrites[dedupKey]?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingWrites.removeValue(forKey: dedupKey)
+            self.flushWrite(section: section, key: key, value: value)
+        }
+        pendingWrites[dedupKey] = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+    }
+
+    private func flushWrite(section: String, key: String, value: TOMLValue) {
+        let raw = (try? String(contentsOf: configURL, encoding: .utf8)) ?? ""
+        let patched = TOMLWriter.patch(raw: raw, section: section, key: key, value: value)
+        writeRaw(patched)
+    }
+
+    /// Remove a TOML section (header + all content lines) from the config file.
+    ///
+    /// The write is immediate (no debounce) — section removal is intentional and discrete.
+    public func removeSection(_ section: String) {
+        let raw = (try? String(contentsOf: configURL, encoding: .utf8)) ?? ""
+        writeRaw(TOMLWriter.removeSection(raw: raw, section: section))
+    }
+
+    /// Atomically write raw TOML content to the config file.
+    private func writeRaw(_ content: String) {
+        do {
+            let tmp = configURL.deletingLastPathComponent()
+                .appendingPathComponent(".config.toml.tmp")
+            try content.write(to: tmp, atomically: false, encoding: .utf8)
+            _ = try FileManager.default.replaceItemAt(configURL, withItemAt: tmp)
+        } catch {
+            report(.fileNotWritable(configURL.path))
         }
     }
 

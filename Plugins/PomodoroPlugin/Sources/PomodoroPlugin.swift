@@ -204,7 +204,7 @@ private struct PomodoroWidgetView: View {
                 .stableMinWidth()
             SessionDots(filled: dotsFilled, total: state.pomodorosForLong)
         }
-        .glassPill(hovered: hovered)
+        .nanoPill(hovered: hovered)
         .offset(x: alertOffset)
         .interactiveRegion()
         .onHover { hovered = $0 }
@@ -240,7 +240,7 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
         let shortBreakSecs   = Int((Double(config["shortBreak"]  ?? "5")  ?? 5)  * 60)
         let longBreakSecs    = Int((Double(config["longBreak"]   ?? "15") ?? 15) * 60)
         let pomodorosForLong = max(1, Int(config["sessions"] ?? "4") ?? 4)
-        self.workColor  = Theme.color(hex: config["workColor"])  ?? Color(red: 1.0, green: 0.420, blue: 0.420)
+        self.workColor  = Theme.color(hex: config["workColor"])  ?? Theme.pomodoroWorkColor
         self.breakColor = Theme.color(hex: config["breakColor"]) ?? Theme.spotifyActive
         self.state = PomodoroState(
             workSecs: workSecs,
@@ -264,9 +264,19 @@ final class PomodoroWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(PomodoroPlugin)
-public final class PomodoroPlugin: NSObject, NanoBarPluginEntry {
+public final class PomodoroPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "pomodoro" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(PomodoroWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Pomodoro" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "work",       label: "Work (min)",        type: .stepper(min: 1, max: 120, step: 1), defaultValue: "25"),
+        SettingsField(key: "shortBreak", label: "Short break (min)", type: .stepper(min: 1, max: 60,  step: 1), defaultValue: "5"),
+        SettingsField(key: "longBreak",  label: "Long break (min)",  type: .stepper(min: 1, max: 120, step: 1), defaultValue: "15"),
+        SettingsField(key: "sessions",   label: "Sessions per cycle",type: .stepper(min: 1, max: 12,  step: 1), defaultValue: "4"),
+        SettingsField(key: "workColor",  label: "Work color",        type: .color,                               defaultValue: Theme.pomodoroWorkColor.toHex8()  ?? ""),
+        SettingsField(key: "breakColor", label: "Break color",       type: .color,                               defaultValue: Theme.pomodoroBreakColor.toHex8() ?? ""),
+    ]}
 }

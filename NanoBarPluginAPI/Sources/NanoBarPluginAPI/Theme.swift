@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 public enum Theme {
@@ -17,6 +18,10 @@ public enum Theme {
     public static let batteryOrange: Color = Color(red: 1.000, green: 0.820, blue: 0.659)
     public static let batteryRed: Color    = Color(red: 1.000, green: 0.702, blue: 0.757)
 
+    public static let tmuxColor:          Color = Color(red: 0.678, green: 0.918, blue: 0.686) // mint-green
+    public static let pomodoroWorkColor:  Color = Color(red: 1.000, green: 0.420, blue: 0.420) // soft red
+    public static let pomodoroBreakColor: Color = spotifyActive                                  // mint
+
     // MARK: - Layout
     public static let barHeight: CGFloat = 30
     public static let barMargin: CGFloat = 8
@@ -34,9 +39,26 @@ public enum Theme {
     public static let nowPlayingIconSize: CGFloat = 12
     public static let labelSize: CGFloat = 12
     public static let notchWidth: CGFloat = 160
-    public static let menuBarAnimDuration: Double = 0.25
+    public static let batteryIconWidth: CGFloat = 26
     /// Extra window height below the bar for shadow rendering; content stays pinned to top.
     public static let shadowOverflow: CGFloat = 14
+
+    // MARK: - Battery thresholds
+    public static let batteryWarnThreshold: Int = 75
+    public static let batteryMedThreshold:  Int = 50
+    public static let batteryLowThreshold:  Int = 25
+
+    // MARK: - Bar shadow
+    public static let barShadowOpacity: Double  = 0.3
+    public static let barShadowRadius:  CGFloat = 8
+    public static let barShadowY:       CGFloat = 4
+
+    // MARK: - Animations
+    public static let menuBarAnimDuration: Double    = 0.25
+    public static let animEase:            Animation = .easeInOut(duration: 0.3)
+    public static let animEaseSlow:        Animation = .easeInOut(duration: 0.4)
+    public static let springIconHover:     Animation = .spring(response: 0.2, dampingFraction: 0.7)
+    public static let springLabelHover:    Animation = .spring(response: 0.3, dampingFraction: 0.75)
 
     // MARK: - Config helpers
 
@@ -59,5 +81,20 @@ public enum Theme {
         default:
             return nil
         }
+    }
+}
+
+// MARK: - Color hex encoding
+
+public extension Color {
+    /// Encodes the color as an 8-digit hex string `"#RRGGBBAA"` in sRGB.
+    /// Returns nil if the color space conversion fails.
+    func toHex8() -> String? {
+        guard let ns = NSColor(self).usingColorSpace(.sRGB) else { return nil }
+        let r = Int((ns.redComponent   * 255).rounded())
+        let g = Int((ns.greenComponent * 255).rounded())
+        let b = Int((ns.blueComponent  * 255).rounded())
+        let a = Int((ns.alphaComponent * 255).rounded())
+        return String(format: "#%02X%02X%02X%02X", r, g, b, a)
     }
 }

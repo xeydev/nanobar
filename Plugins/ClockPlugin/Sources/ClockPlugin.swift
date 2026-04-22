@@ -98,9 +98,15 @@ private final class ClockWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(ClockPlugin)
-public final class ClockPlugin: NSObject, NanoBarPluginEntry {
+public final class ClockPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "clock" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(ClockWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Clock" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "format",  label: "Date format",  type: .text,  defaultValue: "EEE dd MMM HH:mm"),
+        SettingsField(key: "color",   label: "Icon color",   type: .color, defaultValue: Theme.calendarColor.toHex8() ?? ""),
+    ]}
 }

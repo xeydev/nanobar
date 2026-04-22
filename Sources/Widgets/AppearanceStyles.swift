@@ -70,7 +70,7 @@ public struct BarStyle: Sendable {
         case color(Double, Double, Double, Double)  // r, g, b, a  (0–1)
     }
     public let background:   Background
-    public let height:       CGFloat
+    public let minHeight:    CGFloat
     public let cornerRadius: CGFloat
     public let shadow:       Bool
     public let margin:       EdgeInsets   // screen edge → bar background
@@ -80,7 +80,7 @@ public struct BarStyle: Sendable {
     public let borderColor:  Color
 
     public init(_ config: NanoConfig.BarConfig) {
-        height       = CGFloat(config.height)
+        minHeight    = CGFloat(config.minHeight)
         cornerRadius = CGFloat(config.cornerRadius)
         shadow       = config.shadow
         border       = config.border.isEnabled

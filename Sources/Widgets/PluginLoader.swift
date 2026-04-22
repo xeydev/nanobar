@@ -2,6 +2,15 @@ import Foundation
 import Monitors
 import NanoBarPluginAPI
 
+// MARK: - Plugin schema entry
+
+/// The settings schema for one loaded plugin, collected at load time.
+public struct PluginSchema: Sendable {
+    public let pluginID: String
+    public let displayName: String
+    public let fields: [SettingsField]
+}
+
 // MARK: - PluginLoader
 
 /// Loads plugin bundles and registers their widgets into WidgetRegistry.
@@ -27,6 +36,10 @@ public final class PluginLoader {
     private var loaded: [LoadedPlugin] = []
     private init() {}
 
+    /// Settings schemas collected from all loaded plugins that conform to
+    /// ``NanoBarPluginSettingsProvider``. Updated on every ``loadPlugins`` call.
+    public private(set) var pluginSchemas: [PluginSchema] = []
+
     public func loadPlugins(config: NanoConfig, registry: WidgetRegistry) {
         // Auto-discover standard plugins (idempotent — skips already-loaded bundles).
         if let dir = standardPluginsDir {
@@ -42,6 +55,16 @@ public final class PluginLoader {
         for plug in loaded {
             let settings = config.plugins[plug.pluginID]?.settings ?? [:]
             plug.entry.registerWidgets(with: bridge, config: settings)
+        }
+
+        // Collect settings schemas from conforming plugins.
+        pluginSchemas = loaded.compactMap { plug -> PluginSchema? in
+            guard let provider = plug.entry as? any NanoBarPluginSettingsProvider else { return nil }
+            return PluginSchema(
+                pluginID: plug.pluginID,
+                displayName: provider.displayName,
+                fields: provider.settingsSchema()
+            )
         }
     }
 

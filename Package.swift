@@ -15,6 +15,12 @@ let package = Package(
             path: "Sources/NowPlayingHelper",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "MonitorsTests",
+            dependencies: ["Monitors"],
+            path: "Tests/MonitorsTests",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         .executableTarget(
             name: "NanoBar",
             dependencies: ["Widgets", "Monitors"],

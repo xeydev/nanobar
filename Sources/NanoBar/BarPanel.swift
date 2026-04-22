@@ -69,7 +69,7 @@ final class BarPanel: NSPanel {
         fullscreenHidden = hidden
         let targetAlpha: CGFloat = (hidden || menuBarVisible) ? 0 : 1
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.25
+            ctx.duration = Theme.menuBarAnimDuration
             ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animator().alphaValue = targetAlpha
         }

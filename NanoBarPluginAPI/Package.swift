@@ -13,5 +13,11 @@ let package = Package(
             path: "Sources/NanoBarPluginAPI",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "NanoBarPluginAPITests",
+            dependencies: ["NanoBarPluginAPI"],
+            path: "Tests/NanoBarPluginAPITests",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

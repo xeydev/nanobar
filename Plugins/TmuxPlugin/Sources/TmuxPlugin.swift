@@ -70,7 +70,7 @@ private struct TmuxWidgetView: View {
                 .stableMinWidth()
         }
         .nanoPill()
-        .animation(.easeInOut(duration: 0.3), value: state.sessionCount)
+        .animation(Theme.animEase, value: state.sessionCount)
     }
 }
 
@@ -87,7 +87,7 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var accentColor: Color {
-        Theme.color(hex: config["color"]) ?? Color(red: 0.678, green: 0.918, blue: 0.686)
+        Theme.color(hex: config["color"]) ?? Theme.tmuxColor
     }
 }
 
@@ -95,9 +95,14 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
 
 /// Principal class declared in Info.plist via NSPrincipalClass = "TmuxPlugin".
 @objc(TmuxPlugin)
-public final class TmuxPlugin: NSObject, NanoBarPluginEntry {
+public final class TmuxPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "tmux" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(TmuxWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Tmux" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: Theme.tmuxColor.toHex8() ?? ""),
+    ]}
 }

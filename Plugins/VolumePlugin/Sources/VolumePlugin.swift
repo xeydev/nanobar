@@ -249,9 +249,14 @@ private final class VolumeWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(VolumePlugin)
-public final class VolumePlugin: NSObject, NanoBarPluginEntry {
+public final class VolumePlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "volume" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(VolumeWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Volume" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: Theme.volumeColor.toHex8() ?? ""),
+    ]}
 }

@@ -26,7 +26,7 @@ public struct BarRootView: View {
             Group {
                 if isBuiltIn { builtIn } else { external }
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(minHeight: bar.minHeight)
             .background(barBackground)
             .padding(bar.margin)
             .environment(\.monitorID, monitorID)
@@ -48,7 +48,8 @@ public struct BarRootView: View {
                 shape.strokeBorder(bar.borderColor, lineWidth: bar.borderWidth)
             }
         }
-        .shadow(color: bar.shadow ? .black.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+        .shadow(color: bar.shadow ? .black.opacity(Theme.barShadowOpacity) : .clear,
+                radius: Theme.barShadowRadius, x: 0, y: Theme.barShadowY)
     }
 
     // MARK: - Widget dispatch

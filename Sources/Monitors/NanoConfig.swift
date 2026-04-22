@@ -18,7 +18,7 @@ public struct NanoConfig: Decodable, Sendable {
     public struct BarConfig: Decodable, Sendable {
         /// "none" | "blur" | "color:#RRGGBBAA"
         public var background:   String      = "none"
-        public var height:       Double      = 30
+        public var minHeight:    Double      = 30
         public var cornerRadius: Double      = 0
         public var shadow:       Bool        = false
         /// Gap between screen edge and bar background.
@@ -32,12 +32,12 @@ public struct NanoConfig: Decodable, Sendable {
         public init() {}
 
         private enum CodingKeys: String, CodingKey {
-            case background, height, cornerRadius, shadow, margin, padding, border
+            case background, minHeight, cornerRadius, shadow, margin, padding, border
         }
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             background   = try c.decodeIfPresent(String.self,       forKey: .background) ?? "none"
-            height       = try c.decodeDoubleOrInt(forKey: .height)                      ?? 30
+            minHeight    = try c.decodeDoubleOrInt(forKey: .minHeight)                   ?? 30
             cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)                ?? 0
             shadow       = try c.decodeIfPresent(Bool.self,         forKey: .shadow)     ?? false
             margin       = try c.decodeIfPresent(SideInsets.self,   forKey: .margin)     ?? SideInsets()
@@ -46,7 +46,7 @@ public struct NanoConfig: Decodable, Sendable {
         }
     }
 
-    public struct PillConfig: Decodable, Sendable {
+    public struct PillConfig: Decodable, Sendable, Equatable {
         /// "liquidGlass" | "solid" | "none"
         public var style:        String       = "liquidGlass"
         public var height:       Double       = 30
@@ -72,7 +72,7 @@ public struct NanoConfig: Decodable, Sendable {
 
     // MARK: - GlassConfig
 
-    public struct GlassConfig: Decodable, Sendable {
+    public struct GlassConfig: Decodable, Sendable, Equatable {
         /// Effect at rest: "regular" | "clear" | "identity"
         public var defaultEffect: String  = "clear"
         /// Tint color at rest as "#RRGGBBAA" hex, or nil for no tint.
@@ -108,7 +108,7 @@ public struct NanoConfig: Decodable, Sendable {
     // MARK: - BlurConfig
 
     /// Pre-macOS 26 blur fallback for the liquidGlass style.
-    public struct BlurConfig: Decodable, Sendable {
+    public struct BlurConfig: Decodable, Sendable, Equatable {
         /// "regular" | "thin" | "ultraThin"
         public var material: String = "regular"
         /// White gradient overlay to simulate specular highlight.
@@ -151,7 +151,7 @@ public struct NanoConfig: Decodable, Sendable {
 
         [bar]
         background   = "none"    # none | blur | color:#RRGGBBAA
-        height       = 30
+        minHeight    = 30
         cornerRadius = 0
         shadow       = false
 
@@ -256,7 +256,7 @@ public struct NanoConfig: Decodable, Sendable {
 /// margin = { all = 12, top = 4 }      # default + per-side overrides
 /// margin = { top = 4, left = 8 }      # only specified sides (others = 0)
 /// ```
-public struct SideInsets: Decodable, Sendable {
+public struct SideInsets: Decodable, Sendable, Equatable {
     public let top: Double
     public let right: Double
     public let bottom: Double
@@ -293,7 +293,7 @@ public struct SideInsets: Decodable, Sendable {
 /// border = true                                # auto (adaptive color, default width)
 /// border = { width = 1.5, color = "#FF0000" }  # fully custom
 /// ```
-public enum BorderConfig: Decodable, Sendable {
+public enum BorderConfig: Decodable, Sendable, Equatable {
     case disabled
     case auto                                  // border = true
     case custom(width: Double, color: String)  // border = { ... }

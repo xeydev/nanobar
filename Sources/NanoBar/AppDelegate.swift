@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
     private var fullscreenObservers: [Any] = []
     private var fullscreenCheckWork: DispatchWorkItem?
+    private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -22,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         installMenuBarCarbonHandler()
         installFullscreenObservers()
+        installStatusItem()
     }
 
     // MARK: - Reinit
@@ -117,6 +119,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }.value
             for (panel, hidden) in results { panel.setFullscreenHidden(hidden) }
         }
+    }
+
+    // MARK: - Status item
+
+    private func installStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.button?.image = NSImage(systemSymbolName: "square.grid.3x1.below.line.grid.1x2", accessibilityDescription: "NanoBar")
+        item.button?.image?.isTemplate = true
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit NanoBar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        item.menu = menu
+        statusItem = item
+    }
+
+    @objc private func openSettings() {
+        SettingsWindowController.shared.open()
     }
 
     nonisolated private static func screenHasFullscreenWindow(sf: CGRect, primaryH: CGFloat) -> Bool {

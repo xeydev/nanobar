@@ -427,7 +427,7 @@ private struct ClampExpandPill: View {
         }
         .nanoPill(focused: state.isFocused, hovered: isHovered)
         .onHover { hovering in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            withAnimation(Theme.springLabelHover) {
                 hoveredID = hovering ? state.id : nil
             }
         }
@@ -458,7 +458,7 @@ private struct AppIconView: View {
                 .resizable()
                 .frame(width: Theme.appIconSize, height: Theme.appIconSize)
                 .scaleEffect(isHovered ? 1.15 : 1.0)
-                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isHovered)
+                .animation(Theme.springIconHover, value: isHovered)
                 .interactiveRegion()
                 .onHover { isHovered = $0 }
                 .onTapGesture {
@@ -487,9 +487,22 @@ private final class AeroSpaceWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(AeroSpacePlugin)
-public final class AeroSpacePlugin: NSObject, NanoBarPluginEntry {
+public final class AeroSpacePlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "workspaces" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(AeroSpaceWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Workspaces" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(
+            key: "mode", label: "Display mode",
+            type: .picker(options: [
+                PickerOption(value: "labelsOnly",     label: "Labels only"),
+                PickerOption(value: "activeIcons",    label: "Active icons"),
+                PickerOption(value: "clampAndExpand", label: "Clamp & expand"),
+            ]),
+            defaultValue: "clampAndExpand"
+        ),
+    ]}
 }

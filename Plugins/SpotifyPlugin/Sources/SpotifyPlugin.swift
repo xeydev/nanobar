@@ -199,9 +199,14 @@ private final class SpotifyWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(SpotifyPlugin)
-public final class SpotifyPlugin: NSObject, NanoBarPluginEntry {
+public final class SpotifyPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "now_playing" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(SpotifyWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Now Playing" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "activeColor", label: "Active color", type: .color, defaultValue: Theme.spotifyActive.toHex8() ?? ""),
+    ]}
 }

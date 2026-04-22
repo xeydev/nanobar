@@ -80,9 +80,9 @@ private struct BatteryWidgetView: View {
     private var info: BatteryInfo { state.info }
 
     private var color: Color {
-        if info.isCharging || info.percentage > 75 { return colors.normal }
-        if info.percentage > 50                    { return colors.warn   }
-        if info.percentage > 25                    { return colors.med    }
+        if info.isCharging || info.percentage > Theme.batteryWarnThreshold { return colors.normal }
+        if info.percentage > Theme.batteryMedThreshold                     { return colors.warn   }
+        if info.percentage > Theme.batteryLowThreshold                     { return colors.med    }
         return colors.low
     }
 
@@ -102,7 +102,7 @@ private struct BatteryWidgetView: View {
             Image(systemName: symbolName)
                 .font(.system(size: 16))
                 .foregroundStyle(color)
-                .frame(width: 26, height: 14)
+                .frame(width: Theme.batteryIconWidth, height: Theme.iconSize)
                 .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
             Text("\(info.percentage)%")
                 .font(.system(size: Theme.labelSize, weight: .semibold).monospacedDigit())
@@ -111,8 +111,8 @@ private struct BatteryWidgetView: View {
                 .stableMinWidth()
         }
         .nanoPill()
-        .animation(.easeInOut(duration: 0.4), value: info.isCharging)
-        .animation(.easeInOut(duration: 0.4), value: symbolName)
+        .animation(Theme.animEaseSlow, value: info.isCharging)
+        .animation(Theme.animEaseSlow, value: symbolName)
     }
 }
 
@@ -138,9 +138,17 @@ private final class BatteryWidgetFactory: NSObject, NanoBarWidgetFactory {
 // MARK: - Entry point
 
 @objc(BatteryPlugin)
-public final class BatteryPlugin: NSObject, NanoBarPluginEntry {
+public final class BatteryPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
     public var pluginID: String { "battery" }
     @MainActor public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
         registry.register(BatteryWidgetFactory(config: config))
     }
+
+    public var displayName: String { "Battery" }
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "color",     label: "Normal color",  type: .color, defaultValue: Theme.batteryGreen.toHex8()  ?? ""),
+        SettingsField(key: "warnColor", label: "Warning color", type: .color, defaultValue: Theme.batteryYellow.toHex8() ?? ""),
+        SettingsField(key: "medColor",  label: "Medium color",  type: .color, defaultValue: Theme.batteryOrange.toHex8() ?? ""),
+        SettingsField(key: "lowColor",  label: "Low color",     type: .color, defaultValue: Theme.batteryRed.toHex8()    ?? ""),
+    ]}
 }
