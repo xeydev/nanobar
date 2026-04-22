@@ -77,17 +77,25 @@ struct PluginDetailView: View {
     private var resetSection: some View {
         Section {
             Button("Reset settings", role: .destructive) {
-                // Remove child subsections before the parent so no orphaned sections remain.
-                ConfigLoader.shared.removeSection(pillSection)
+                // Remove children deepest-first so no orphaned subsections remain.
+                removePillSectionTree()
                 ConfigLoader.shared.removeSection(pluginSection)
                 pillOverrideEnabled = false
             }
             if pillOverrideEnabled {
                 Button("Reset pill override", role: .destructive) {
-                    ConfigLoader.shared.removeSection(pillSection)
+                    removePillSectionTree()
                     pillOverrideEnabled = false
                 }
             }
         }
+    }
+
+    /// Remove the per-plugin pill section and all its child subsections, deepest-first.
+    private func removePillSectionTree() {
+        let glassSection = "\(pillSection).liquidGlass"
+        ConfigLoader.shared.removeSection("\(glassSection).blur")
+        ConfigLoader.shared.removeSection(glassSection)
+        ConfigLoader.shared.removeSection(pillSection)
     }
 }
