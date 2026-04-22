@@ -216,7 +216,7 @@ private struct VolumeWidgetView: View {
                 .lineLimit(1)
                 .stableMinWidth()
         }
-        .glassPill()
+        .nanoPill()
     }
 
     // Single Image — identity preserved so Magic Replace fires correctly on mute/unmute.

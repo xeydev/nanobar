@@ -173,7 +173,7 @@ private struct SpotifyWidgetView: View {
                     .contentTransition(.symbolEffect(.replace))
                 MarqueeText(text: fullText, maxWidth: 180)
             }
-            .glassPill()
+            .nanoPill()
             .animation(.default, value: state.isPlaying)
         }
     }

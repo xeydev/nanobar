@@ -69,7 +69,7 @@ private struct TmuxWidgetView: View {
                 .lineLimit(1)
                 .stableMinWidth()
         }
-        .glassPill()
+        .nanoPill()
         .animation(.easeInOut(duration: 0.3), value: state.sessionCount)
     }
 }

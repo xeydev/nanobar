@@ -18,7 +18,7 @@ A lightweight, plugin-based status bar for macOS — pure Swift/SwiftUI, no Elec
 
 ## Features
 
-- **Glassmorphic pills** — per-widget vibrancy materials, borders, shadows, corner radii
+- **Liquid Glass pills** — native macOS 26 glass effect with per-widget hover/focus states; vibrancy blur fallback on macOS 15
 - **Plugin system** — extend with `.bundle` plugins; drop in or point to a path
 - **Multi-monitor** — one bar per screen, automatically managed
 - **Fullscreen aware** — bar hides when a fullscreen window covers the screen
@@ -32,8 +32,7 @@ A lightweight, plugin-based status bar for macOS — pure Swift/SwiftUI, no Elec
 ### Homebrew (recommended)
 
 ```bash
-brew tap xeydev/tap
-brew install nanobar
+brew install xeydev/tap/nanobar
 brew services start nanobar
 ```
 
@@ -88,11 +87,26 @@ padding = { all = 8, left = 16 }
 
 ```toml
 [pill]
-shadow       = true
-border       = true
-material     = "glass"   # glass | thin | ultraThin | solid | none
-specular     = true
+style        = "liquidGlass"   # liquidGlass | solid | none
+height       = 30
 cornerRadius = 15
+border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
+
+[pill.liquidGlass]
+# Glass effect per interaction state. effect: "regular" | "clear" | "identity"
+# tint: "#RRGGBBAA" hex, or omit for no tint.
+defaultEffect = "clear"
+# defaultTint = "#FFFFFF20"
+hoverEffect   = "regular"
+hoverTint     = "#FFFFFF30"
+toggledEffect = "regular"
+toggledTint   = "#FFFFFF30"
+
+[pill.liquidGlass.blur]
+# Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).
+material = "regular"   # regular | thin | ultraThin
+specular = true
+shadow   = true
 ```
 
 Override per-plugin:
@@ -101,7 +115,6 @@ Override per-plugin:
 [plugins.clock.pill]
 cornerRadius = 20
 border       = { width = 1.0, color = "#FF7EB6" }
-material     = "ultraThin"
 ```
 
 ---

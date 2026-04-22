@@ -41,12 +41,23 @@ public enum Theme {
     // MARK: - Config helpers
 
     public static func color(hex: String?) -> Color? {
-        guard let hex, hex.hasPrefix("#"), hex.count == 7 else { return nil }
+        guard let hex, hex.hasPrefix("#") else { return nil }
         let h = String(hex.dropFirst())
         guard let value = UInt64(h, radix: 16) else { return nil }
-        let r = Double((value >> 16) & 0xFF) / 255
-        let g = Double((value >>  8) & 0xFF) / 255
-        let b = Double( value        & 0xFF) / 255
-        return Color(red: r, green: g, blue: b)
+        switch h.count {
+        case 6:
+            let r = Double((value >> 16) & 0xFF) / 255
+            let g = Double((value >>  8) & 0xFF) / 255
+            let b = Double( value        & 0xFF) / 255
+            return Color(red: r, green: g, blue: b)
+        case 8:
+            let r = Double((value >> 24) & 0xFF) / 255
+            let g = Double((value >> 16) & 0xFF) / 255
+            let b = Double((value >>  8) & 0xFF) / 255
+            let a = Double( value        & 0xFF) / 255
+            return Color(red: r, green: g, blue: b, opacity: a)
+        default:
+            return nil
+        }
     }
 }

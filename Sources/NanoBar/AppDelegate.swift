@@ -6,8 +6,6 @@ import Monitors
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barPanels: [BarPanel] = []
-    private var mouseMonitors: [Any] = []
-    private var mouseSyncPending = false
     private var fullscreenObservers: [Any] = []
     private var fullscreenCheckWork: DispatchWorkItem?
 
@@ -23,7 +21,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
         installMenuBarCarbonHandler()
-        installMouseMonitors()
         installFullscreenObservers()
     }
 
@@ -140,49 +137,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
-    // MARK: - Mouse pass-through
-
-    private func installMouseMonitors() {
-        // Global monitors may fire off the main thread; hop to @MainActor before touching state.
-        let hop: @Sendable (NSEvent) -> Void = { [weak self] _ in
-            Task { @MainActor [weak self] in self?.scheduleMouseSync() }
-        }
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: hop) {
-            mouseMonitors.append(global)
-        }
-        if let local = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved, handler: { [weak self] event in
-            Task { @MainActor [weak self] in self?.scheduleMouseSync() }
-            return event
-        }) {
-            mouseMonitors.append(local)
-        }
-    }
-
-    /// Coalesces bursts of mouseMoved events: at most one syncMousePassThrough per runloop turn.
-    private func scheduleMouseSync() {
-        guard !mouseSyncPending else { return }
-        mouseSyncPending = true
-        // DispatchQueue.main.async defers to the next RunLoop iteration, which is required for
-        // coalescing: multiple mouseMoved events within the same turn all see pending=true and
-        // return early; the deferred block runs once after they have all been processed.
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.mouseSyncPending = false
-                self.syncMousePassThrough()
-            }
-        }
-    }
-
-    private func syncMousePassThrough() {
-        let loc = NSEvent.mouseLocation
-        for panel in barPanels {
-            let windowPoint = panel.convertPoint(fromScreen: loc)
-            let interactive = panel.frame.contains(loc)
-                           && panel.contentView?.hitTest(windowPoint) != nil
-            if panel.ignoresMouseEvents == interactive {
-                panel.ignoresMouseEvents = !interactive
-            }
-        }
-    }
 }

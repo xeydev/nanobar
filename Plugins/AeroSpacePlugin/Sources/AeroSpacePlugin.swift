@@ -363,8 +363,7 @@ private struct LabelOnlyPill: View {
         Text(state.id)
             .font(.system(size: Theme.labelSize, weight: .semibold))
             .foregroundStyle(state.isFocused ? Theme.labelColor : Theme.grey)
-            .glassPill(focused: state.isFocused, hovered: isHovered)
-            .interactiveRegion()
+            .nanoPill(focused: state.isFocused, hovered: isHovered)
             .onHover { h in withAnimation(.easeInOut(duration: 0.15)) { isHovered = h } }
             .onTapGesture {
                 Task { try? await AeroSpaceClient.shared.run(args: ["workspace", state.id]) }
@@ -389,8 +388,7 @@ private struct ActiveIconsPill: View {
                 }
             }
         }
-        .glassPill(focused: state.isFocused, hovered: isHovered)
-        .interactiveRegion()
+        .nanoPill(focused: state.isFocused, hovered: isHovered)
         .onHover { h in withAnimation(.easeInOut(duration: 0.15)) { isHovered = h } }
         .onTapGesture {
             Task { try? await AeroSpaceClient.shared.run(args: ["workspace", state.id]) }
@@ -427,8 +425,7 @@ private struct ClampExpandPill: View {
                 }
             }
         }
-        .glassPill(focused: state.isFocused, hovered: isHovered)
-        .interactiveRegion()
+        .nanoPill(focused: state.isFocused, hovered: isHovered)
         .onHover { hovering in
             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                 hoveredID = hovering ? state.id : nil

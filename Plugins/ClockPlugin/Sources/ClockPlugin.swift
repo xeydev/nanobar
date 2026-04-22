@@ -75,7 +75,7 @@ private struct ClockWidgetView: View {
                     .lineLimit(1)
                     .stableMinWidth()
             }
-            .glassPill()
+            .nanoPill()
         }
     }
 }

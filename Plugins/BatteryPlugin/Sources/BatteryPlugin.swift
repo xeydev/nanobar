@@ -110,7 +110,7 @@ private struct BatteryWidgetView: View {
                 .lineLimit(1)
                 .stableMinWidth()
         }
-        .glassPill()
+        .nanoPill()
         .animation(.easeInOut(duration: 0.4), value: info.isCharging)
         .animation(.easeInOut(duration: 0.4), value: symbolName)
     }

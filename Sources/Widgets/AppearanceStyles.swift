@@ -1,6 +1,6 @@
 import SwiftUI
 import Monitors
-// NanoBarPluginAPI re-exported via GlassPill.swift
+// NanoBarPluginAPI re-exported via NanoPill.swift
 
 // MARK: - PillStyle (NanoConfig initialiser)
 
@@ -8,22 +8,54 @@ import Monitors
 // This extension adds the NanoConfig-backed initialiser used by the host only.
 extension PillStyle {
     init(_ config: NanoConfig.PillConfig) {
+        let variant: Variant = {
+            switch config.style {
+            case "solid": return .solid
+            case "none":  return .none
+            default:      return .liquidGlass
+            }
+        }()
+
+        let mapEffect: (String) -> GlassVariant = {
+            switch $0 {
+            case "regular":  return .regular
+            case "identity": return .identity
+            default:         return .clear
+            }
+        }
+
+        let mapBlurMaterial: (String) -> BlurMaterial = {
+            switch $0 {
+            case "thin":      return .thin
+            case "ultraThin": return .ultraThin
+            default:          return .regular
+            }
+        }
+
+        let g = config.liquidGlass
+
         self.init(
-            shadow:       config.shadow,
+            variant:      variant,
+            height:       CGFloat(config.height),
+            cornerRadius: CGFloat(config.cornerRadius),
             border:       config.border.isEnabled,
             borderWidth:  CGFloat(config.border.width),
             borderColor:  config.border.customColor.flatMap { Theme.color(hex: $0) },
-            specular:     config.specular,
-            cornerRadius: CGFloat(config.cornerRadius),
-            material: {
-                switch config.material {
-                case "thin":      return .thinMaterial
-                case "ultraThin": return .ultraThinMaterial
-                case "solid":     return .solid
-                case "none":      return .none
-                default:          return .regularMaterial
-                }
-            }()
+            glassDefault: GlassStateConfig(
+                effect:    mapEffect(g.defaultEffect),
+                tintColor: Theme.color(hex: g.defaultTint)
+            ),
+            glassHover: GlassStateConfig(
+                effect:    mapEffect(g.hoverEffect),
+                tintColor: Theme.color(hex: g.hoverTint)
+            ),
+            glassToggled: GlassStateConfig(
+                effect:    mapEffect(g.toggledEffect),
+                tintColor: Theme.color(hex: g.toggledTint)
+            ),
+            blurMaterial: mapBlurMaterial(g.blur.material),
+            blurSpecular: g.blur.specular,
+            blurShadow:   g.blur.shadow
         )
     }
 }
@@ -108,4 +140,4 @@ public extension EnvironmentValues {
     }
 }
 
-// monitorID environment key lives in NanoBarPluginAPI (re-exported via GlassPill.swift).
+// monitorID environment key lives in NanoBarPluginAPI (re-exported via NanoPill.swift).

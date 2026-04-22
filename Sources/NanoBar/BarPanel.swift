@@ -37,13 +37,16 @@ final class BarPanel: NSPanel {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = CGColor(red: 0, green: 0, blue: 0, alpha: 0)
 
-        level                       = .statusBar
+        level                       = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue - 1)
         collectionBehavior          = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
         isOpaque                    = false
         backgroundColor             = .clear
         hasShadow                   = false
-        ignoresMouseEvents          = true
+        // ignoresMouseEvents stays false (default) — panel stays in the
+        // compositor's live compositing chain so glassEffect() samples live
+        // desktop content. PassThroughHostingView.hitTest() handles per-pixel
+        // pass-through for non-interactive areas.
         contentView                 = hosting
     }
 

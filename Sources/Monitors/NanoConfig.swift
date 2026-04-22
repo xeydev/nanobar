@@ -47,23 +47,82 @@ public struct NanoConfig: Decodable, Sendable {
     }
 
     public struct PillConfig: Decodable, Sendable {
-        public var shadow:        Bool         = true
+        /// "liquidGlass" | "solid" | "none"
+        public var style:        String       = "liquidGlass"
+        public var height:       Double       = 30
+        public var cornerRadius: Double       = 15
         /// `false` | `true` (adaptive) | `{ width = 0.75, color = "#FFFFFF47" }`
-        public var border:        BorderConfig = .auto
-        /// "glass" | "thin" | "ultraThin" | "solid" | "none"
-        public var material:      String       = "glass"
-        public var specular:      Bool         = true
-        public var cornerRadius:  Double       = 15
+        public var border:       BorderConfig = .auto
+        /// Options for the liquidGlass style (ignored for solid/none).
+        public var liquidGlass:  GlassConfig  = .init()
         public init() {}
 
-        private enum CodingKeys: String, CodingKey { case shadow, border, material, specular, cornerRadius }
+        private enum CodingKeys: String, CodingKey {
+            case style, height, cornerRadius, border, liquidGlass
+        }
         public init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            shadow       = try c.decodeIfPresent(Bool.self,         forKey: .shadow)   ?? true
-            border       = try c.decodeIfPresent(BorderConfig.self, forKey: .border)   ?? .auto
-            material     = try c.decodeIfPresent(String.self,       forKey: .material) ?? "glass"
-            specular     = try c.decodeIfPresent(Bool.self,         forKey: .specular) ?? true
-            cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)              ?? 15
+            let c    = try decoder.container(keyedBy: CodingKeys.self)
+            style        = try c.decodeIfPresent(String.self,       forKey: .style)       ?? "liquidGlass"
+            height       = try c.decodeDoubleOrInt(forKey: .height)                       ?? 30
+            cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)                 ?? 15
+            border       = try c.decodeIfPresent(BorderConfig.self, forKey: .border)      ?? .auto
+            liquidGlass  = try c.decodeIfPresent(GlassConfig.self,  forKey: .liquidGlass) ?? .init()
+        }
+    }
+
+    // MARK: - GlassConfig
+
+    public struct GlassConfig: Decodable, Sendable {
+        /// Effect at rest: "regular" | "clear" | "identity"
+        public var defaultEffect: String  = "clear"
+        /// Tint color at rest as "#RRGGBBAA" hex, or nil for no tint.
+        public var defaultTint:   String? = nil
+        /// Effect on hover.
+        public var hoverEffect:   String  = "regular"
+        public var hoverTint:     String? = "#FFFFFF30"
+        /// Effect when focused/toggled (e.g. active workspace).
+        public var toggledEffect: String  = "regular"
+        public var toggledTint:   String? = "#FFFFFF30"
+        /// Pre-macOS 26 fallback appearance (ignored on macOS 26+).
+        public var blur:          BlurConfig = .init()
+        public init() {}
+
+        private enum CodingKeys: String, CodingKey {
+            case defaultEffect, defaultTint
+            case hoverEffect, hoverTint
+            case toggledEffect, toggledTint
+            case blur
+        }
+        public init(from decoder: any Decoder) throws {
+            let c        = try decoder.container(keyedBy: CodingKeys.self)
+            defaultEffect = try c.decodeIfPresent(String.self,     forKey: .defaultEffect) ?? "clear"
+            defaultTint   = try c.decodeIfPresent(String.self,     forKey: .defaultTint)
+            hoverEffect   = try c.decodeIfPresent(String.self,     forKey: .hoverEffect)   ?? "regular"
+            hoverTint     = try c.decodeIfPresent(String.self,     forKey: .hoverTint)     ?? "#FFFFFF30"
+            toggledEffect = try c.decodeIfPresent(String.self,     forKey: .toggledEffect) ?? "regular"
+            toggledTint   = try c.decodeIfPresent(String.self,     forKey: .toggledTint)   ?? "#FFFFFF30"
+            blur          = try c.decodeIfPresent(BlurConfig.self,  forKey: .blur)          ?? .init()
+        }
+    }
+
+    // MARK: - BlurConfig
+
+    /// Pre-macOS 26 blur fallback for the liquidGlass style.
+    public struct BlurConfig: Decodable, Sendable {
+        /// "regular" | "thin" | "ultraThin"
+        public var material: String = "regular"
+        /// White gradient overlay to simulate specular highlight.
+        public var specular: Bool   = true
+        /// Manual drop shadow (macOS 26 glass manages its own shadow).
+        public var shadow:   Bool   = true
+        public init() {}
+
+        private enum CodingKeys: String, CodingKey { case material, specular, shadow }
+        public init(from decoder: any Decoder) throws {
+            let c    = try decoder.container(keyedBy: CodingKeys.self)
+            material = try c.decodeIfPresent(String.self, forKey: .material) ?? "regular"
+            specular = try c.decodeIfPresent(Bool.self,   forKey: .specular) ?? true
+            shadow   = try c.decodeIfPresent(Bool.self,   forKey: .shadow)   ?? true
         }
     }
 
@@ -111,11 +170,29 @@ public struct NanoConfig: Decodable, Sendable {
         # ─── Pill appearance ──────────────────────────────────────────────────────────
 
         [pill]
-        shadow       = true
-        border       = true
-        material     = "glass"   # glass | thin | ultraThin | solid | none
-        specular     = true
+        style        = "liquidGlass"   # liquidGlass | solid | none
+        height       = 30
         cornerRadius = 15
+        border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
+
+        [pill.liquidGlass]
+        # Glass effect for each interaction state.
+        # effect: "regular" | "clear" | "identity"
+        # tint:   "#RRGGBBAA" hex, or omit for no tint
+        defaultEffect = "clear"
+        # defaultTint   = "#FFFFFF20"
+
+        hoverEffect   = "regular"
+        hoverTint     = "#FFFFFF30"
+
+        toggledEffect = "regular"
+        toggledTint   = "#FFFFFF30"
+
+        [pill.liquidGlass.blur]
+        # Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).
+        material = "regular"   # regular | thin | ultraThin
+        specular = true        # white gradient overlay
+        shadow   = true        # macOS 26 glass manages its own shadow
 
         # ─── Standard plugin settings (optional overrides) ────────────────────────────
         # Standard plugins are auto-loaded from the Plugins/ directory — no bundle

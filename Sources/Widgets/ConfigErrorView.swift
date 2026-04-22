@@ -17,7 +17,7 @@ struct ConfigErrorView: View {
                 .font(.system(size: Theme.labelSize, weight: .semibold))
                 .foregroundStyle(Color.yellow)
         }
-        .glassPill()
+        .nanoPill()
         .help(error.localizedDescription ?? String(describing: error))
     }
 }

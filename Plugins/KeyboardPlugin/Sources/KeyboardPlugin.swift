@@ -92,7 +92,7 @@ private struct KeyboardWidgetView: View {
                 .lineLimit(1)
                 .stableMinWidth()
         }
-        .glassPill()
+        .nanoPill()
         .onChange(of: state.layout) { wiggle.toggle() }
     }
 }
