@@ -68,7 +68,7 @@ That's all you need to get started. Everything else is optional.
 ```toml
 [bar]
 background   = "none"    # none | blur | color:#RRGGBBAA
-height       = 30
+minHeight    = 30
 cornerRadius = 0
 shadow       = false
 margin       = 0         # gap between screen edge and bar
@@ -131,7 +131,7 @@ All bundled plugins are auto-discovered at startup — no `bundle` key required.
 | **Keyboard layout**       | `keyboard`    | `color`                                                   |
 | **AeroSpace workspaces**  | `workspaces`  | `mode`: `labelsOnly` \| `activeIcons` \| `clampAndExpand` |
 | **Spotify / Now Playing** | `now_playing` | `activeColor`                                             |
-| **Tmux session**          | `tmux`        | —                                                         |
+| **Tmux session**          | `tmux`        | `color`                                                   |
 
 Example plugin config:
 
@@ -176,21 +176,33 @@ Add this manually to `~/.aerospace.toml`.
 
 ## Writing a Plugin
 
-Plugins are macOS `.bundle` targets implementing the `NanoBarPluginAPI` protocol.
+Plugins are macOS `.bundle` targets linked against `NanoBarPluginAPI`.
 
 ### 1. Entry point
 
-Set `NSPrincipalClass` in `Info.plist` to your entry class name, then implement:
+Set `NSPrincipalClass` in `Info.plist` to your entry class name, then implement `NanoBarPluginEntry` and optionally `NanoBarPluginSettingsProvider`:
 
 ```swift
 import NanoBarPluginAPI
 
-@objc(MyPluginEntry)
-final class MyPluginEntry: NSObject, NanoBarPluginEntry {
-    func registerWidgets(with registry: NanoBarWidgetRegistry,
-                         config: NanoBarConfig) {
-        registry.register(MyWidgetFactory(config: config))
+@objc(MyPlugin)
+public final class MyPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettingsProvider {
+    public var pluginID: String { "my_widget" }  // matches [plugins.my_widget] key
+
+    // Call resolvedSettings() to merge schema defaults into the raw dict,
+    // so the factory can safely force-unwrap every key.
+    @MainActor
+    public func registerWidgets(with registry: any NanoBarWidgetRegistry, config: [String: String]) {
+        registry.register(MyWidgetFactory(config: resolvedSettings(config)))
     }
+
+    public var displayName: String { "My Widget" }
+
+    // All default values live here — nowhere else.
+    public func settingsSchema() -> [SettingsField] {[
+        SettingsField(key: "color", label: "Color", type: .color,
+                      defaultValue: Theme.myColor.toHex8() ?? ""),
+    ]}
 }
 ```
 
@@ -200,37 +212,38 @@ final class MyPluginEntry: NSObject, NanoBarPluginEntry {
 import NanoBarPluginAPI
 import SwiftUI
 
-final class MyWidgetFactory: NSObject, NanoBarWidgetFactory {
-    let widgetID = "my_widget"   // matches [plugins.my_widget] in config
-    private let settings: [String: String]
+private final class MyWidgetFactory: NSObject, NanoBarWidgetFactory {
+    private let config: [String: String]
+    init(config: [String: String]) { self.config = config }
 
-    init(config: NanoBarConfig) {
-        self.settings = config.settings(for: "my_widget")
-    }
+    var widgetID: String { "my_widget" }
 
-    func makeViewBox() -> NanoBarViewBox {
-        NanoBarViewBoxImpl(AnyView(MyWidgetView(settings: settings)))
+    @MainActor func makeViewBox() -> NanoBarViewBox {
+        // resolvedSettings() guarantees every schema key is present.
+        // Use ! for key access; keep ?? only as a parse-error guard for colors.
+        let color = Theme.color(hex: config["color"]!) ?? Theme.myColor
+        return NanoBarViewBox(AnyView(MyWidgetView(color: color)))
     }
 }
 ```
 
 ### 3. Build
 
-Declare a `.target` with `type: .dynamic` in `Package.swift`. See existing plugins for the canonical setup.
+Declare a `.bundle` target in `Package.swift` (see existing plugins for the canonical setup). Use `./build-dev.sh` to compile, or `./run` to rebuild and relaunch NanoBar:
 
 ```bash
-cd Plugins/MyPlugin
-./build.sh   # prints the path to the built .bundle
+./build-dev.sh   # debug build; links plugin bundles into .build/debug/Plugins/
 ```
 
-Point to it from config:
+Point to a third-party plugin from config:
 
 ```toml
 [plugins.my_widget]
 bundle = "/path/to/MyPlugin.bundle"
+color  = "#AABBCC"   # only non-default values needed
 ```
 
-Every key in `[plugins.<id>]` other than `bundle` and `pill` is forwarded to the plugin as `[String: String]` via `config.settings(for:)`.
+Every key in `[plugins.<id>]` other than `bundle` and `pill` is forwarded to the plugin as `[String: String]` in `registerWidgets`. Keys absent from the TOML file are filled from `settingsSchema()` defaults by `resolvedSettings()`.
 
 ---
 
