@@ -45,18 +45,18 @@ public struct PillStyle: Sendable {
     public let blurShadow:    Bool            // macOS 26 glass manages its own shadow
 
     public init(
-        variant:      Variant          = .liquidGlass,
-        height:       CGFloat          = 30,
-        cornerRadius: CGFloat          = 15,
-        border:       Bool             = true,
-        borderWidth:  CGFloat          = 0.75,
-        borderColor:  Color?           = nil,
-        glassDefault: GlassStateConfig = GlassStateConfig(effect: .regular),
-        glassHover:   GlassStateConfig = GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.99)),
-        glassToggled: GlassStateConfig = GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.19)),
-        blurMaterial: BlurMaterial     = .regular,
-        blurSpecular: Bool             = true,
-        blurShadow:   Bool             = true
+        variant:      Variant,
+        height:       CGFloat,
+        cornerRadius: CGFloat,
+        border:       Bool,
+        borderWidth:  CGFloat,
+        borderColor:  Color?,
+        glassDefault: GlassStateConfig,
+        glassHover:   GlassStateConfig,
+        glassToggled: GlassStateConfig,
+        blurMaterial: BlurMaterial,
+        blurSpecular: Bool,
+        blurShadow:   Bool
     ) {
         self.variant      = variant
         self.height       = height
@@ -72,13 +72,32 @@ public struct PillStyle: Sendable {
         self.blurShadow   = blurShadow
     }
 
-    public static let `default` = PillStyle()
+    /// Pre-launch fallback — overwritten by `PillStyle.bootstrapDefault()` (called from
+    /// AppDelegate) with `PillStyle(NanoConfig.PillConfig())`, the single source of truth.
+    /// These explicit values are only reached in SwiftUI previews or isolated tests that
+    /// skip host setup. Do not treat them as authoritative defaults.
+    // nonisolated(unsafe): written once before any view renders, read-only after that.
+    nonisolated(unsafe) public static var `default` = PillStyle(
+        variant:      .liquidGlass,
+        height:       30,
+        cornerRadius: 15,
+        border:       true,
+        borderWidth:  0.75,
+        borderColor:  nil,
+        glassDefault: GlassStateConfig(effect: .clear),
+        glassHover:   GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.19)),
+        glassToggled: GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.19)),
+        blurMaterial: .regular,
+        blurSpecular: true,
+        blurShadow:   true
+    )
 }
 
 // MARK: - Environment keys
 
 private struct PillStyleKey: EnvironmentKey {
-    static let defaultValue = PillStyle.default
+    // Computed so it reflects PillStyle.default after the host overrides it at launch.
+    static var defaultValue: PillStyle { PillStyle.default }
 }
 
 private struct PillHighlightedKey: EnvironmentKey {

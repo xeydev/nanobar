@@ -13,8 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
+        PillStyle.bootstrapDefault()
         ConfigLoader.shared.loadOrCreate()
-        ConfigLoader.shared.onReload = { [weak self] in self?.reinit() }
+        ConfigLoader.shared.onReload = { [weak self] in self?.hotReload() }
         reinit()
 
         NotificationCenter.default.addObserver(
@@ -28,8 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Reinit
 
-    /// Called on first launch and on every successful config reload.
-    /// Tears down panels and widget registry, then rebuilds from current config.
+    /// Full reinit: tears down panels and widget registry, then rebuilds from current config.
+    /// Called on first launch and on screen configuration changes.
     private func reinit() {
         barPanels.forEach { $0.close() }
         barPanels.removeAll()
@@ -39,6 +40,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
 
         setupBars()
+    }
+
+    /// Hot-reload: re-registers plugins with updated settings without rebuilding bar panels.
+    /// BarRootView updates appearance (pill style, bar style, tint) automatically via
+    /// @EnvironmentObject — no panel teardown needed for config changes.
+    private func hotReload() {
+        let config = ConfigLoader.shared.config
+        PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
     }
 
     // MARK: - Bar setup

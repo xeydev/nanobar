@@ -2,11 +2,19 @@ import SwiftUI
 import Monitors
 // NanoBarPluginAPI re-exported via NanoPill.swift
 
-// MARK: - PillStyle (NanoConfig initialiser)
+// MARK: - PillStyle (NanoConfig initialiser + default bootstrap)
 
 // PillStyle itself lives in NanoBarPluginAPI so plugins can use it.
-// This extension adds the NanoConfig-backed initialiser used by the host only.
+// This extension adds the NanoConfig-backed initialiser and the bootstrap
+// that makes NanoConfig.PillConfig() the single source of truth for the default.
 extension PillStyle {
+    /// Call once at app startup (before any views render) to make PillStyle.default
+    /// derive from NanoConfig.PillConfig() — the single source of truth.
+    /// See AppDelegate.applicationDidFinishLaunching.
+    public static func bootstrapDefault() {
+        PillStyle.default = PillStyle(NanoConfig.PillConfig())
+    }
+
     init(_ config: NanoConfig.PillConfig) {
         let variant: Variant = {
             switch config.style {
