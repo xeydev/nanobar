@@ -49,18 +49,9 @@ extension PillStyle {
             border:       config.border.isEnabled,
             borderWidth:  CGFloat(config.border.width),
             borderColor:  config.border.customColor.flatMap { Theme.color(hex: $0) },
-            glassDefault: GlassStateConfig(
-                effect:    mapEffect(g.defaultEffect),
-                tintColor: Theme.color(hex: g.defaultTint)
-            ),
-            glassHover: GlassStateConfig(
-                effect:    mapEffect(g.hoverEffect),
-                tintColor: Theme.color(hex: g.hoverTint)
-            ),
-            glassToggled: GlassStateConfig(
-                effect:    mapEffect(g.toggledEffect),
-                tintColor: Theme.color(hex: g.toggledTint)
-            ),
+            glassDefault: GlassStateConfig(effect: mapEffect(g.defaultEffect)),
+            glassHover:   GlassStateConfig(effect: mapEffect(g.hoverEffect)),
+            glassToggled: GlassStateConfig(effect: mapEffect(g.toggledEffect)),
             blurMaterial: mapBlurMaterial(g.blur.material),
             blurSpecular: g.blur.specular,
             blurShadow:   g.blur.shadow

@@ -14,12 +14,10 @@ public enum GlassVariant: Sendable {
 
 /// Appearance for one interaction state (default / hover / toggled).
 public struct GlassStateConfig: Sendable {
-    public let effect:    GlassVariant
-    public let tintColor: Color?         // nil = no tint
+    public let effect: GlassVariant
 
-    public init(effect: GlassVariant = .clear, tintColor: Color? = nil) {
-        self.effect    = effect
-        self.tintColor = tintColor
+    public init(effect: GlassVariant = .clear) {
+        self.effect = effect
     }
 }
 
@@ -85,8 +83,8 @@ public struct PillStyle: Sendable {
         borderWidth:  0.75,
         borderColor:  nil,
         glassDefault: GlassStateConfig(effect: .clear),
-        glassHover:   GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.19)),
-        glassToggled: GlassStateConfig(effect: .regular, tintColor: Color(white: 1, opacity: 0.19)),
+        glassHover:   GlassStateConfig(effect: .regular),
+        glassToggled: GlassStateConfig(effect: .regular),
         blurMaterial: .regular,
         blurSpecular: true,
         blurShadow:   true
@@ -172,8 +170,12 @@ public struct NanoPillModifier: ViewModifier {
     private func backgroundedLiquidGlass<V: View>(_ content: V, shape: RoundedRectangle, activeState: GlassStateConfig) -> some View {
         switch pillStyle.variant {
         case .liquidGlass:
+            let tintOpacity: Double = hovered ? 0.3 : focused ? 0.5 : 0.0
+            let glass: Glass = tintOpacity > 0
+                ? makeGlass(from: activeState).tint(.white.opacity(tintOpacity))
+                : makeGlass(from: activeState)
             content
-                .glassEffect(makeGlass(from: activeState), in: shape)
+                .glassEffect(glass, in: shape)
                 .overlay { borderOverlay(shape: shape) }
         case .solid:
             backgroundedBlur(content, shape: shape)
@@ -184,14 +186,11 @@ public struct NanoPillModifier: ViewModifier {
 
     @available(macOS 26, *)
     private func makeGlass(from state: GlassStateConfig) -> Glass {
-        let base: Glass
         switch state.effect {
-        case .regular:  base = .regular
-        case .clear:    base = .clear
-        case .identity: base = .identity
+        case .regular:  return .regular
+        case .clear:    return .clear
+        case .identity: return .identity
         }
-        guard let color = state.tintColor else { return base }
-        return base.tint(color)
     }
 
     @ViewBuilder

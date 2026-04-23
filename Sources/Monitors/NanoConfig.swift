@@ -75,32 +75,22 @@ public struct NanoConfig: Decodable, Sendable {
     public struct GlassConfig: Decodable, Sendable, Equatable {
         /// Effect at rest: "regular" | "clear" | "identity"
         public var defaultEffect: String  = "clear"
-        /// Tint color at rest as "#RRGGBBAA" hex, or nil for no tint.
-        public var defaultTint:   String? = nil
         /// Effect on hover.
         public var hoverEffect:   String  = "regular"
-        public var hoverTint:     String? = "#FFFFFF30"
         /// Effect when focused/toggled (e.g. active workspace).
         public var toggledEffect: String  = "regular"
-        public var toggledTint:   String? = "#FFFFFF30"
         /// Pre-macOS 26 fallback appearance (ignored on macOS 26+).
         public var blur:          BlurConfig = .init()
         public init() {}
 
         private enum CodingKeys: String, CodingKey {
-            case defaultEffect, defaultTint
-            case hoverEffect, hoverTint
-            case toggledEffect, toggledTint
-            case blur
+            case defaultEffect, hoverEffect, toggledEffect, blur
         }
         public init(from decoder: any Decoder) throws {
             let c        = try decoder.container(keyedBy: CodingKeys.self)
             defaultEffect = try c.decodeIfPresent(String.self,     forKey: .defaultEffect) ?? "clear"
-            defaultTint   = try c.decodeIfPresent(String.self,     forKey: .defaultTint)
             hoverEffect   = try c.decodeIfPresent(String.self,     forKey: .hoverEffect)   ?? "regular"
-            hoverTint     = try c.decodeIfPresent(String.self,     forKey: .hoverTint)     ?? "#FFFFFF30"
             toggledEffect = try c.decodeIfPresent(String.self,     forKey: .toggledEffect) ?? "regular"
-            toggledTint   = try c.decodeIfPresent(String.self,     forKey: .toggledTint)   ?? "#FFFFFF30"
             blur          = try c.decodeIfPresent(BlurConfig.self,  forKey: .blur)          ?? .init()
         }
     }
@@ -177,17 +167,10 @@ public struct NanoConfig: Decodable, Sendable {
         # border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
 
         # [pill.liquidGlass]
-        # # Glass effect for each interaction state.
-        # # effect: "regular" | "clear" | "identity"
-        # # tint:   "#RRGGBBAA" hex, or omit for no tint
+        # # Glass effect for each interaction state: "regular" | "clear" | "identity"
         # defaultEffect = "clear"
-        # # defaultTint   = "#FFFFFF20"
-        #
         # hoverEffect   = "regular"
-        # hoverTint     = "#FFFFFF30"
-        #
         # toggledEffect = "regular"
-        # toggledTint   = "#FFFFFF30"
 
         # [pill.liquidGlass.blur]
         # # Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).

@@ -26,11 +26,8 @@ struct PillConfigEditor: View {
 
     // LiquidGlass
     @State private var defaultEffect: String = "clear"
-    @State private var defaultTint:   String = ""
     @State private var hoverEffect:   String = "regular"
-    @State private var hoverTint:     String = "#FFFFFF30"
     @State private var toggledEffect: String = "regular"
-    @State private var toggledTint:   String = "#FFFFFF30"
 
     // Blur fallback
     @State private var blurMaterial: String = "regular"
@@ -64,15 +61,9 @@ struct PillConfigEditor: View {
 
             if localStyle == "liquidGlass" {
                 Section("Liquid Glass") {
-                    glassRow(label: "Default effect",
-                             effect: $defaultEffect, effectKey: "defaultEffect", defaultEffect: defaults?.liquidGlass.defaultEffect,
-                             tint:   $defaultTint,   tintKey:   "defaultTint",   defaultTint: defaults?.liquidGlass.defaultTint ?? "")
-                    glassRow(label: "Hover effect",
-                             effect: $hoverEffect,   effectKey: "hoverEffect",   defaultEffect: defaults?.liquidGlass.hoverEffect,
-                             tint:   $hoverTint,     tintKey:   "hoverTint",     defaultTint: defaults?.liquidGlass.hoverTint)
-                    glassRow(label: "Toggled effect",
-                             effect: $toggledEffect, effectKey: "toggledEffect", defaultEffect: defaults?.liquidGlass.toggledEffect,
-                             tint:   $toggledTint,   tintKey:   "toggledTint",   defaultTint: defaults?.liquidGlass.toggledTint)
+                    glassRow(label: "Default effect", effect: $defaultEffect, effectKey: "defaultEffect", defaultEffect: defaults?.liquidGlass.defaultEffect)
+                    glassRow(label: "Hover effect",   effect: $hoverEffect,   effectKey: "hoverEffect",   defaultEffect: defaults?.liquidGlass.hoverEffect)
+                    glassRow(label: "Toggled effect", effect: $toggledEffect, effectKey: "toggledEffect", defaultEffect: defaults?.liquidGlass.toggledEffect)
                 }
 
                 Section("Blur Fallback (pre-macOS 26)") {
@@ -105,35 +96,15 @@ struct PillConfigEditor: View {
     // MARK: - Glass row helper
 
     @ViewBuilder
-    private func glassRow(label: String,
-                           effect: Binding<String>, effectKey: String, defaultEffect: String?,
-                           tint:   Binding<String>, tintKey:   String, defaultTint: String?) -> some View {
-        LabeledContent(label) {
-            HStack {
-                Picker("", selection: effect) {
-                    Text("Regular").tag("regular")
-                    Text("Clear").tag("clear")
-                    Text("Identity").tag("identity")
-                }
-                .labelsHidden()
-                .frame(width: 120)
-                .onChange(of: effect.wrappedValue) { _, v in
-                    writeSection(glassSection, key: effectKey, value: .string(v),
-                                 isDefault: v == defaultEffect)
-                }
-
-                ColorPicker("", selection: Binding(
-                    get: { Theme.color(hex: tint.wrappedValue) ?? Color.white.opacity(0) },
-                    set: { color in
-                        let hex = color.toHex8() ?? "#FFFFFF00"
-                        tint.wrappedValue = hex
-                        writeSection(glassSection, key: tintKey, value: .string(hex),
-                                     isDefault: hex == defaultTint)
-                    }
-                ), supportsOpacity: true)
-                .labelsHidden()
-                .frame(width: 40)
-            }
+    private func glassRow(label: String, effect: Binding<String>, effectKey: String, defaultEffect: String?) -> some View {
+        Picker(label, selection: effect) {
+            Text("Regular").tag("regular")
+            Text("Clear").tag("clear")
+            Text("Identity").tag("identity")
+        }
+        .onChange(of: effect.wrappedValue) { _, v in
+            writeSection(glassSection, key: effectKey, value: .string(v),
+                         isDefault: v == defaultEffect)
         }
     }
 
@@ -161,9 +132,9 @@ struct PillConfigEditor: View {
         localHeight       = p.height
         localCornerRadius = p.cornerRadius
         let g = p.liquidGlass
-        defaultEffect = g.defaultEffect;  defaultTint   = g.defaultTint   ?? ""
-        hoverEffect   = g.hoverEffect;    hoverTint     = g.hoverTint     ?? ""
-        toggledEffect = g.toggledEffect;  toggledTint   = g.toggledTint   ?? ""
+        defaultEffect = g.defaultEffect
+        hoverEffect   = g.hoverEffect
+        toggledEffect = g.toggledEffect
         let b = g.blur
         blurMaterial = b.material;  blurSpecular = b.specular;  blurShadow = b.shadow
     }

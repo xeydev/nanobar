@@ -29,46 +29,31 @@ struct NanoConfigTests {
         #expect(config.plugins["clock"]?.pill != nil)
     }
 
-    // MARK: - Glass tint parsing
+    // MARK: - Glass effect parsing
 
-    @Test("camelCase tint keys are decoded correctly from TOML")
-    func glassConfigTintParsing() throws {
+    @Test("glass effect keys are decoded correctly from TOML")
+    func glassConfigEffectParsing() throws {
         let raw = """
             [pill.liquidGlass]
             defaultEffect = "regular"
-            defaultTint = "#FF000080"
-            hoverEffect = "regular"
-            hoverTint = "#00FF0080"
-            toggledEffect = "regular"
-            toggledTint = "#0000FF80"
+            hoverEffect   = "identity"
+            toggledEffect = "clear"
             """
         let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
         let glass = config.pill.liquidGlass
         #expect(glass.defaultEffect == "regular")
-        #expect(glass.defaultTint   == "#FF000080")
-        #expect(glass.hoverTint     == "#00FF0080")
-        #expect(glass.toggledTint   == "#0000FF80")
+        #expect(glass.hoverEffect   == "identity")
+        #expect(glass.toggledEffect == "clear")
     }
 
-    @Test("nil defaultTint when key absent, defaults applied for hover/toggled")
-    func glassConfigTintDefaults() throws {
-        let raw = """
-            [pill.liquidGlass]
-            defaultEffect = "clear"
-            """
+    @Test("glass effect defaults applied when keys absent")
+    func glassConfigEffectDefaults() throws {
+        let raw = "[pill.liquidGlass]\n"
         let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
         let glass = config.pill.liquidGlass
-        #expect(glass.defaultTint   == nil)
-        #expect(glass.hoverTint     == "#FFFFFF30")
-        #expect(glass.toggledTint   == "#FFFFFF30")
-    }
-
-    @Test("TOMLWriter patch round-trip preserves tint hex value")
-    func glassConfigWriteReadRoundTrip() throws {
-        var raw = ""
-        raw = TOMLWriter.patch(raw: raw, section: "pill.liquidGlass", key: "defaultTint", value: .string("#AB12CD80"))
-        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
-        #expect(config.pill.liquidGlass.defaultTint == "#AB12CD80")
+        #expect(glass.defaultEffect == "clear")
+        #expect(glass.hoverEffect   == "regular")
+        #expect(glass.toggledEffect == "regular")
     }
 
     /// Removing all three pill section levels (deepest-first) correctly leaves pill == nil.
