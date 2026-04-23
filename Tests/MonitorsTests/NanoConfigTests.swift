@@ -83,4 +83,53 @@ struct NanoConfigTests {
         // Plugin's own settings are preserved.
         #expect(config.plugins["clock"]?.settings["format"] == "%H:%M")
     }
+
+    // MARK: - Theme config
+
+    @Test("theme defaults to system when [app] section absent")
+    func themeDefaultsToSystem() throws {
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: "")
+        #expect(config.app.theme == "system")
+    }
+
+    @Test("theme = light decoded from [app] section")
+    func themeLightDecoded() throws {
+        let raw = "[app]\ntheme = \"light\""
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
+        #expect(config.app.theme == "light")
+    }
+
+    @Test("theme = dark decoded from [app] section")
+    func themeDarkDecoded() throws {
+        let raw = "[app]\ntheme = \"dark\""
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
+        #expect(config.app.theme == "dark")
+    }
+
+    @Test("resolvedTheme returns .system for default config")
+    func resolvedThemeDefault() {
+        let config = NanoConfig()
+        #expect(config.resolvedTheme == .system)
+    }
+
+    @Test("resolvedTheme returns .light when theme string is light")
+    func resolvedThemeLight() {
+        var config = NanoConfig()
+        config.app.theme = "light"
+        #expect(config.resolvedTheme == .light)
+    }
+
+    @Test("resolvedTheme returns .dark when theme string is dark")
+    func resolvedThemeDark() {
+        var config = NanoConfig()
+        config.app.theme = "dark"
+        #expect(config.resolvedTheme == .dark)
+    }
+
+    @Test("resolvedTheme falls back to .system for unrecognized string")
+    func resolvedThemeFallback() {
+        var config = NanoConfig()
+        config.app.theme = "sepia"
+        #expect(config.resolvedTheme == .system)
+    }
 }

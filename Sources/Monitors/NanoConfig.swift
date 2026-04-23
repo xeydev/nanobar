@@ -1,12 +1,33 @@
 import Foundation
 import TOMLKit
 
+// MARK: - AppTheme
+
+/// Controls the app-wide color scheme. Persisted as `theme` under `[app]` in config.toml.
+public enum AppTheme: String, CaseIterable, Sendable {
+    case system
+    case light
+    case dark
+}
+
 // MARK: - Config model
 
 /// The full NanoBar configuration decoded from ~/.config/nanobar/config.toml.
 public struct NanoConfig: Decodable, Sendable {
 
     // MARK: Nested types
+
+    public struct AppConfig: Decodable, Sendable {
+        /// "system" | "light" | "dark"
+        public var theme: String = "system"
+        public init() {}
+
+        private enum CodingKeys: String, CodingKey { case theme }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? "system"
+        }
+    }
 
     public struct Widgets: Decodable, Sendable {
         public var left:   [String] = ["workspaces"]
@@ -55,10 +76,14 @@ public struct NanoConfig: Decodable, Sendable {
         public var border:       BorderConfig = .auto
         /// Options for the liquidGlass style (ignored for solid/none).
         public var liquidGlass:  GlassConfig  = .init()
+        /// Fill color for the solid style, e.g. `"#1C1C1ECC"`. Ignored for other styles.
+        public var solidColor:   String       = "#1C1C1ECC"
+        /// Whether to show a drop shadow in the solid style.
+        public var solidShadow:  Bool         = false
         public init() {}
 
         private enum CodingKeys: String, CodingKey {
-            case style, height, cornerRadius, border, liquidGlass
+            case style, height, cornerRadius, border, liquidGlass, solidColor, solidShadow
         }
         public init(from decoder: any Decoder) throws {
             let c    = try decoder.container(keyedBy: CodingKeys.self)
@@ -67,6 +92,8 @@ public struct NanoConfig: Decodable, Sendable {
             cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)                 ?? 15
             border       = try c.decodeIfPresent(BorderConfig.self, forKey: .border)      ?? .auto
             liquidGlass  = try c.decodeIfPresent(GlassConfig.self,  forKey: .liquidGlass) ?? .init()
+            solidColor   = try c.decodeIfPresent(String.self,       forKey: .solidColor)  ?? "#1C1C1ECC"
+            solidShadow  = try c.decodeIfPresent(Bool.self,         forKey: .solidShadow) ?? false
         }
     }
 
@@ -118,12 +145,18 @@ public struct NanoConfig: Decodable, Sendable {
 
     // MARK: Properties
 
-    public var widgets: Widgets   = .init()
-    public var bar:     BarConfig = .init()
+    public var app:     AppConfig  = .init()
+    public var widgets: Widgets    = .init()
+    public var bar:     BarConfig  = .init()
     public var pill:    PillConfig = .init()
 
     /// One entry per `[plugins.<id>]` section.
     public var plugins: [String: PluginEntry] = [:]
+
+    /// Parsed `app.theme` string. Falls back to `.system` for unrecognized values.
+    public var resolvedTheme: AppTheme {
+        AppTheme(rawValue: app.theme) ?? .system
+    }
 
     // MARK: Defaults
 
@@ -216,17 +249,17 @@ public struct NanoConfig: Decodable, Sendable {
 
     // Manual CodingKeys to map TOML structure to Swift model.
     private enum CodingKeys: String, CodingKey {
-        case widgets, bar, pill, plugins
+        case app, widgets, bar, pill, plugins
     }
 
     public init() {}
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        app     = try container.decodeIfPresent(AppConfig.self, forKey: .app)   ?? .init()
         widgets = try container.decodeIfPresent(Widgets.self, forKey: .widgets) ?? .init()
         bar     = try container.decodeIfPresent(BarConfig.self, forKey: .bar)   ?? .init()
         pill    = try container.decodeIfPresent(PillConfig.self, forKey: .pill) ?? .init()
-
         plugins = try container.decodeIfPresent([String: PluginEntry].self, forKey: .plugins) ?? [:]
     }
 }

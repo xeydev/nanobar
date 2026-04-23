@@ -6,6 +6,7 @@ import NanoBarPluginAPI
 // MARK: - Navigation items
 
 enum NavItem: Hashable {
+    case general
     case widgets
     case bar
     case pill
@@ -15,7 +16,7 @@ enum NavItem: Hashable {
 // MARK: - Root SettingsView
 
 struct SettingsView: View {
-    @State private var selection: NavItem? = .widgets
+    @State private var selection: NavItem? = .general
     private let schemas = PluginLoader.shared.pluginSchemas
 
     var body: some View {
@@ -30,6 +31,8 @@ struct SettingsView: View {
 
     @ViewBuilder private var detailView: some View {
         switch selection {
+        case .general:
+            GeneralDetailView()
         case .widgets:
             WidgetsDetailView()
         case .bar:
@@ -56,6 +59,10 @@ private struct SidebarView: View {
 
     var body: some View {
         List(selection: $selection) {
+            Section("General") {
+                Label("General", systemImage: "gearshape")
+                    .tag(NavItem.general)
+            }
             Section("Layout") {
                 Label("Widgets", systemImage: "rectangle.3.group")
                     .tag(NavItem.widgets)

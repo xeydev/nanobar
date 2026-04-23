@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         PillStyle.bootstrapDefault()
         ConfigLoader.shared.loadOrCreate()
+        applyTheme(ConfigLoader.shared.config.resolvedTheme)
         ConfigLoader.shared.onReload = { [weak self] in self?.hotReload() }
         reinit()
 
@@ -47,7 +48,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// @EnvironmentObject — no panel teardown needed for config changes.
     private func hotReload() {
         let config = ConfigLoader.shared.config
+        applyTheme(config.resolvedTheme)
         PluginLoader.shared.loadPlugins(config: config, registry: WidgetRegistry.shared)
+    }
+
+    private func applyTheme(_ theme: AppTheme) {
+        switch theme {
+        case .system: NSApp.appearance = nil
+        case .light:  NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     // MARK: - Bar setup
