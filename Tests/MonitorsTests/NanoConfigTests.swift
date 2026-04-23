@@ -29,6 +29,48 @@ struct NanoConfigTests {
         #expect(config.plugins["clock"]?.pill != nil)
     }
 
+    // MARK: - Glass tint parsing
+
+    @Test("camelCase tint keys are decoded correctly from TOML")
+    func glassConfigTintParsing() throws {
+        let raw = """
+            [pill.liquidGlass]
+            defaultEffect = "regular"
+            defaultTint = "#FF000080"
+            hoverEffect = "regular"
+            hoverTint = "#00FF0080"
+            toggledEffect = "regular"
+            toggledTint = "#0000FF80"
+            """
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
+        let glass = config.pill.liquidGlass
+        #expect(glass.defaultEffect == "regular")
+        #expect(glass.defaultTint   == "#FF000080")
+        #expect(glass.hoverTint     == "#00FF0080")
+        #expect(glass.toggledTint   == "#0000FF80")
+    }
+
+    @Test("nil defaultTint when key absent, defaults applied for hover/toggled")
+    func glassConfigTintDefaults() throws {
+        let raw = """
+            [pill.liquidGlass]
+            defaultEffect = "clear"
+            """
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
+        let glass = config.pill.liquidGlass
+        #expect(glass.defaultTint   == nil)
+        #expect(glass.hoverTint     == "#FFFFFF30")
+        #expect(glass.toggledTint   == "#FFFFFF30")
+    }
+
+    @Test("TOMLWriter patch round-trip preserves tint hex value")
+    func glassConfigWriteReadRoundTrip() throws {
+        var raw = ""
+        raw = TOMLWriter.patch(raw: raw, section: "pill.liquidGlass", key: "defaultTint", value: .string("#AB12CD80"))
+        let config = try TOMLDecoder().decode(NanoConfig.self, from: raw)
+        #expect(config.pill.liquidGlass.defaultTint == "#AB12CD80")
+    }
+
     /// Removing all three pill section levels (deepest-first) correctly leaves pill == nil.
     @Test("removeSectionTree removes all pill levels leaving pill nil")
     func removeSectionTreeMakesPillNil() throws {
