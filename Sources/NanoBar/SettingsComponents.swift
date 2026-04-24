@@ -280,8 +280,8 @@ struct SettingsFieldRow: View {
         case .color:
             ColorPicker("", selection: Binding(
                 get: {
-                    let hex = localValue.isEmpty ? field.defaultValue : localValue
-                    return Theme.color(hex: hex) ?? .white
+                    if !localValue.isEmpty, let c = Theme.color(hex: localValue) { return c }
+                    return field.adaptiveColor ?? .white
                 },
                 set: { color in
                     if let hex = color.toHex8() { commit(hex) }

@@ -26,7 +26,7 @@ public struct GlassStateConfig: Sendable {
 /// Global pill appearance, injected via @Environment(\.pillStyle).
 /// Plugins read this automatically — the host sets it from config.
 public struct PillStyle: Sendable {
-    public enum Variant:      Sendable { case liquidGlass, solid, none }
+    public enum Variant:      Sendable { case liquidGlass, blur, solid, none }
     public enum BlurMaterial: Sendable { case regular, thin, ultraThin }
 
     public let variant:       Variant
@@ -38,36 +38,51 @@ public struct PillStyle: Sendable {
     public let glassDefault:  GlassStateConfig
     public let glassHover:    GlassStateConfig
     public let glassToggled:  GlassStateConfig
-    public let blurMaterial:  BlurMaterial    // pre-26 fallback for liquidGlass / solid
-    public let blurSpecular:  Bool            // white gradient overlay in blur mode
-    public let blurShadow:    Bool            // macOS 26 glass manages its own shadow
+    public let blurMaterial:      BlurMaterial  // pre-26 fallback for liquidGlass
+    public let blurSpecular:      Bool          // white gradient overlay in blur mode
+    public let blurShadow:        Bool          // macOS 26 glass manages its own shadow
+    public let blurStyleMaterial: BlurMaterial  // material for standalone .blur variant
+    public let blurStyleSpecular: Bool          // specular for standalone .blur variant
+    public let blurStyleShadow:   Bool          // shadow for standalone .blur variant
+    public let solidColor:        Color?        // fill color for .solid variant; nil = system default
+    public let solidShadow:       Bool          // drop shadow for .solid variant
 
     public init(
-        variant:      Variant,
-        height:       CGFloat,
-        cornerRadius: CGFloat,
-        border:       Bool,
-        borderWidth:  CGFloat,
-        borderColor:  Color?,
-        glassDefault: GlassStateConfig,
-        glassHover:   GlassStateConfig,
-        glassToggled: GlassStateConfig,
-        blurMaterial: BlurMaterial,
-        blurSpecular: Bool,
-        blurShadow:   Bool
+        variant:          Variant,
+        height:           CGFloat,
+        cornerRadius:     CGFloat,
+        border:           Bool,
+        borderWidth:      CGFloat,
+        borderColor:      Color?,
+        glassDefault:     GlassStateConfig,
+        glassHover:       GlassStateConfig,
+        glassToggled:     GlassStateConfig,
+        blurMaterial:     BlurMaterial,
+        blurSpecular:     Bool,
+        blurShadow:       Bool,
+        blurStyleMaterial: BlurMaterial  = .regular,
+        blurStyleSpecular: Bool          = true,
+        blurStyleShadow:   Bool          = false,
+        solidColor:        Color?        = nil,
+        solidShadow:       Bool          = false
     ) {
-        self.variant      = variant
-        self.height       = height
-        self.cornerRadius = cornerRadius
-        self.border       = border
-        self.borderWidth  = borderWidth
-        self.borderColor  = borderColor
-        self.glassDefault = glassDefault
-        self.glassHover   = glassHover
-        self.glassToggled = glassToggled
-        self.blurMaterial = blurMaterial
-        self.blurSpecular = blurSpecular
-        self.blurShadow   = blurShadow
+        self.variant          = variant
+        self.height           = height
+        self.cornerRadius     = cornerRadius
+        self.border           = border
+        self.borderWidth      = borderWidth
+        self.borderColor      = borderColor
+        self.glassDefault     = glassDefault
+        self.glassHover       = glassHover
+        self.glassToggled     = glassToggled
+        self.blurMaterial     = blurMaterial
+        self.blurSpecular     = blurSpecular
+        self.blurShadow       = blurShadow
+        self.blurStyleMaterial = blurStyleMaterial
+        self.blurStyleSpecular = blurStyleSpecular
+        self.blurStyleShadow   = blurStyleShadow
+        self.solidColor        = solidColor
+        self.solidShadow       = solidShadow
     }
 
     /// Pre-launch fallback — overwritten by `PillStyle.bootstrapDefault()` (called from
@@ -177,8 +192,13 @@ public struct NanoPillModifier: ViewModifier {
             content
                 .glassEffect(glass, in: shape)
                 .overlay { borderOverlay(shape: shape) }
+        case .blur:
+            backgroundedMaterial(content, shape: shape,
+                                 material: pillStyle.blurStyleMaterial,
+                                 specular: pillStyle.blurStyleSpecular,
+                                 shadow:   pillStyle.blurStyleShadow)
         case .solid:
-            backgroundedBlur(content, shape: shape)
+            backgroundedSolid(content, shape: shape)
         case .none:
             content.clipShape(shape)
         }
@@ -194,38 +214,61 @@ public struct NanoPillModifier: ViewModifier {
     }
 
     @ViewBuilder
+    private func backgroundedSolid<V: View>(_ content: V, shape: RoundedRectangle) -> some View {
+        let fill = pillStyle.solidColor ?? Color(red: 0.11, green: 0.11, blue: 0.118, opacity: 0.8)
+        content
+            .background { shape.fill(fill) }
+            .overlay { borderOverlay(shape: shape) }
+            .shadow(color: pillStyle.solidShadow ? .black.opacity(0.35) : .clear, radius: 6, x: 0, y: 3)
+    }
+
+    @ViewBuilder
     private func backgroundedBlur<V: View>(_ content: V, shape: RoundedRectangle) -> some View {
-        if case .none = pillStyle.variant {
+        switch pillStyle.variant {
+        case .none:
             content.clipShape(shape)
-        } else {
-            let material: Material = {
-                switch pillStyle.blurMaterial {
-                case .thin:      return .thinMaterial
-                case .ultraThin: return .ultraThinMaterial
-                case .regular:   return .regularMaterial
-                }
-            }()
-            content
-                .background {
-                    ZStack {
-                        shape.fill(material)
-                        if pillStyle.blurSpecular {
-                            shape.fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.18), .clear],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
+        case .blur:
+            backgroundedMaterial(content, shape: shape,
+                                 material: pillStyle.blurStyleMaterial,
+                                 specular: pillStyle.blurStyleSpecular,
+                                 shadow:   pillStyle.blurStyleShadow)
+        case .solid:
+            backgroundedSolid(content, shape: shape)
+        case .liquidGlass:
+            backgroundedMaterial(content, shape: shape,
+                                 material: pillStyle.blurMaterial,
+                                 specular: pillStyle.blurSpecular,
+                                 shadow:   pillStyle.blurShadow)
+        }
+    }
+
+    @ViewBuilder
+    private func backgroundedMaterial<V: View>(_ content: V, shape: RoundedRectangle,
+                                               material: PillStyle.BlurMaterial, specular: Bool, shadow: Bool) -> some View {
+        let mat: Material = {
+            switch material {
+            case .thin:      return .thinMaterial
+            case .ultraThin: return .ultraThinMaterial
+            case .regular:   return .regularMaterial
+            }
+        }()
+        content
+            .background {
+                ZStack {
+                    shape.fill(mat)
+                    if specular {
+                        shape.fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.18), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                        }
+                        )
                     }
                 }
-                .overlay { borderOverlay(shape: shape) }
-                .shadow(
-                    color: pillStyle.blurShadow ? .black.opacity(0.35) : .clear,
-                    radius: 6, x: 0, y: 3
-                )
-        }
+            }
+            .overlay { borderOverlay(shape: shape) }
+            .shadow(color: shadow ? .black.opacity(0.35) : .clear, radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder

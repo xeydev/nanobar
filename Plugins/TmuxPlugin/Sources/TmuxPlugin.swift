@@ -87,7 +87,7 @@ private final class TmuxWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var accentColor: Color {
-        Theme.color(hex: config["color"]!) ?? Theme.tmuxColor
+        Theme.color(hex: config["color"] ?? "") ?? Theme.tmuxColor
     }
 }
 
@@ -103,6 +103,6 @@ public final class TmuxPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSettin
 
     public var displayName: String { "Tmux" }
     public func settingsSchema() -> [SettingsField] {[
-        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: Theme.tmuxColor.toHex8() ?? ""),
+        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: "", adaptiveColor: Theme.tmuxColor),
     ]}
 }

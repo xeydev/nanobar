@@ -192,7 +192,7 @@ private final class SpotifyWidgetFactory: NSObject, NanoBarWidgetFactory {
     }
 
     private var activeColor: Color {
-        Theme.color(hex: config["activeColor"]!) ?? Theme.spotifyActive
+        Theme.color(hex: config["activeColor"] ?? "") ?? Theme.spotifyActive
     }
 }
 
@@ -207,6 +207,6 @@ public final class SpotifyPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSet
 
     public var displayName: String { "Now Playing" }
     public func settingsSchema() -> [SettingsField] {[
-        SettingsField(key: "activeColor", label: "Active color", type: .color, defaultValue: Theme.spotifyActive.toHex8() ?? ""),
+        SettingsField(key: "activeColor", label: "Active color", type: .color, defaultValue: "", adaptiveColor: Theme.spotifyActive),
     ]}
 }

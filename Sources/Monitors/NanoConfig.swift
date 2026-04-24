@@ -68,14 +68,16 @@ public struct NanoConfig: Decodable, Sendable {
     }
 
     public struct PillConfig: Decodable, Sendable, Equatable {
-        /// "liquidGlass" | "solid" | "none"
+        /// "liquidGlass" | "blur" | "solid" | "none"
         public var style:        String       = "liquidGlass"
         public var height:       Double       = 30
         public var cornerRadius: Double       = 15
         /// `false` | `true` (adaptive) | `{ width = 0.75, color = "#FFFFFF47" }`
         public var border:       BorderConfig = .auto
-        /// Options for the liquidGlass style (ignored for solid/none).
+        /// Options for the liquidGlass style (ignored for blur/solid/none).
         public var liquidGlass:  GlassConfig  = .init()
+        /// Options for the blur style (ignored for other styles).
+        public var blur:         BlurConfig   = .init()
         /// Fill color for the solid style, e.g. `"#1C1C1ECC"`. Ignored for other styles.
         public var solidColor:   String       = "#1C1C1ECC"
         /// Whether to show a drop shadow in the solid style.
@@ -83,7 +85,7 @@ public struct NanoConfig: Decodable, Sendable {
         public init() {}
 
         private enum CodingKeys: String, CodingKey {
-            case style, height, cornerRadius, border, liquidGlass, solidColor, solidShadow
+            case style, height, cornerRadius, border, liquidGlass, blur, solidColor, solidShadow
         }
         public init(from decoder: any Decoder) throws {
             let c    = try decoder.container(keyedBy: CodingKeys.self)
@@ -92,6 +94,7 @@ public struct NanoConfig: Decodable, Sendable {
             cornerRadius = try c.decodeDoubleOrInt(forKey: .cornerRadius)                 ?? 15
             border       = try c.decodeIfPresent(BorderConfig.self, forKey: .border)      ?? .auto
             liquidGlass  = try c.decodeIfPresent(GlassConfig.self,  forKey: .liquidGlass) ?? .init()
+            blur         = try c.decodeIfPresent(BlurConfig.self,   forKey: .blur)        ?? .init()
             solidColor   = try c.decodeIfPresent(String.self,       forKey: .solidColor)  ?? "#1C1C1ECC"
             solidShadow  = try c.decodeIfPresent(Bool.self,         forKey: .solidShadow) ?? false
         }

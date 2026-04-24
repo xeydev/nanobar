@@ -126,10 +126,10 @@ private final class BatteryWidgetFactory: NSObject, NanoBarWidgetFactory {
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
         let colors = (
-            normal: Theme.color(hex: config["color"]!)     ?? Theme.batteryGreen,
-            warn:   Theme.color(hex: config["warnColor"]!) ?? Theme.batteryYellow,
-            med:    Theme.color(hex: config["medColor"]!)  ?? Theme.batteryOrange,
-            low:    Theme.color(hex: config["lowColor"]!)  ?? Theme.batteryRed
+            normal: Theme.color(hex: config["color"]     ?? "") ?? Theme.batteryGreen,
+            warn:   Theme.color(hex: config["warnColor"] ?? "") ?? Theme.batteryYellow,
+            med:    Theme.color(hex: config["medColor"]  ?? "") ?? Theme.batteryOrange,
+            low:    Theme.color(hex: config["lowColor"]  ?? "") ?? Theme.batteryRed
         )
         return NanoBarViewBox(AnyView(BatteryWidgetView(colors: colors)))
     }
@@ -146,9 +146,9 @@ public final class BatteryPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSet
 
     public var displayName: String { "Battery" }
     public func settingsSchema() -> [SettingsField] {[
-        SettingsField(key: "color",     label: "Normal color",  type: .color, defaultValue: Theme.batteryGreen.toHex8()  ?? ""),
-        SettingsField(key: "warnColor", label: "Warning color", type: .color, defaultValue: Theme.batteryYellow.toHex8() ?? ""),
-        SettingsField(key: "medColor",  label: "Medium color",  type: .color, defaultValue: Theme.batteryOrange.toHex8() ?? ""),
-        SettingsField(key: "lowColor",  label: "Low color",     type: .color, defaultValue: Theme.batteryRed.toHex8()    ?? ""),
+        SettingsField(key: "color",     label: "Normal color",  type: .color, defaultValue: "", adaptiveColor: Theme.batteryGreen),
+        SettingsField(key: "warnColor", label: "Warning color", type: .color, defaultValue: "", adaptiveColor: Theme.batteryYellow),
+        SettingsField(key: "medColor",  label: "Medium color",  type: .color, defaultValue: "", adaptiveColor: Theme.batteryOrange),
+        SettingsField(key: "lowColor",  label: "Low color",     type: .color, defaultValue: "", adaptiveColor: Theme.batteryRed),
     ]}
 }

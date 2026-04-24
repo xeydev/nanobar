@@ -1,3 +1,5 @@
+import SwiftUI
+
 // MARK: - Settings schema types
 
 /// A single configurable field declared by a plugin for display in the Settings UI.
@@ -6,13 +8,20 @@ public struct SettingsField: Sendable {
     public let label: String
     public let type: FieldType
     /// TOML-compatible default value string (e.g. `"#FFFFFF"`, `"25"`, `"true"`).
+    /// For `.color` fields with adaptive defaults, pass `""` here and supply `adaptiveColor`.
     public let defaultValue: String
+    /// For `.color` fields: the live adaptive `Theme` color shown in the picker when no
+    /// custom value is set. Stored as `""` in config; the factory falls back to this Color
+    /// at render time so it re-resolves on every theme change.
+    /// Nil for non-color fields or color fields with a fixed default.
+    public let adaptiveColor: Color?
 
-    public init(key: String, label: String, type: FieldType, defaultValue: String) {
+    public init(key: String, label: String, type: FieldType, defaultValue: String, adaptiveColor: Color? = nil) {
         self.key = key
         self.label = label
         self.type = type
         self.defaultValue = defaultValue
+        self.adaptiveColor = adaptiveColor
     }
 }
 

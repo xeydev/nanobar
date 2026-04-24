@@ -2,25 +2,58 @@ import AppKit
 import SwiftUI
 
 public enum Theme {
-    // MARK: - Colors (semantic — adapt to light/dark and system accent)
-    public static let iconColor: Color     = Color(red: 0.867, green: 0.714, blue: 0.949) // lavender
-    public static let labelColor: Color    = .primary                                  // white in dark, dark in light
-    public static let grey: Color          = .secondary                                // dim text
+    // MARK: - Colors (adaptive — correct on dark, light, and liquid glass)
+    public static let iconColor: Color     = adaptive(
+        light: Color(red: 0.50, green: 0.18, blue: 0.72),  // purple
+        dark:  Color(red: 0.867, green: 0.714, blue: 0.949) // lavender
+    )
+    public static let labelColor: Color    = .primary
+    public static let grey: Color          = .secondary
 
-    public static let spotifyActive: Color = Color(red: 0.710, green: 0.918, blue: 0.843) // mint
+    public static let spotifyActive: Color = adaptive(
+        light: Color(red: 0.02, green: 0.52, blue: 0.42),   // teal
+        dark:  Color(red: 0.710, green: 0.918, blue: 0.843) // mint
+    )
     public static let spotifyPaused: Color = .secondary
-    public static let volumeColor: Color   = Color(red: 0.682, green: 0.776, blue: 0.910) // powder blue
-    public static let calendarColor: Color = Color(red: 1.000, green: 0.702, blue: 0.757) // rose
-    public static let keyboardColor: Color = Color(red: 0.867, green: 0.714, blue: 0.949) // lavender
+    public static let volumeColor: Color   = adaptive(
+        light: Color(red: 0.18, green: 0.40, blue: 0.72),   // steel blue
+        dark:  Color(red: 0.682, green: 0.776, blue: 0.910) // powder blue
+    )
+    public static let calendarColor: Color = adaptive(
+        light: Color(red: 0.78, green: 0.14, blue: 0.28),   // crimson
+        dark:  Color(red: 1.000, green: 0.702, blue: 0.757) // rose
+    )
+    public static let keyboardColor: Color = adaptive(
+        light: Color(red: 0.50, green: 0.18, blue: 0.72),   // purple
+        dark:  Color(red: 0.867, green: 0.714, blue: 0.949) // lavender
+    )
 
-    public static let batteryGreen: Color  = Color(red: 0.710, green: 0.918, blue: 0.843)
-    public static let batteryYellow: Color = Color(red: 1.000, green: 0.961, blue: 0.729)
-    public static let batteryOrange: Color = Color(red: 1.000, green: 0.820, blue: 0.659)
-    public static let batteryRed: Color    = Color(red: 1.000, green: 0.702, blue: 0.757)
+    public static let batteryGreen: Color  = adaptive(
+        light: Color(red: 0.08, green: 0.58, blue: 0.08),   // forest green
+        dark:  Color(red: 0.710, green: 0.918, blue: 0.843) // mint
+    )
+    public static let batteryYellow: Color = adaptive(
+        light: Color(red: 0.65, green: 0.48, blue: 0.00),   // dark amber
+        dark:  Color(red: 1.000, green: 0.961, blue: 0.729) // pale yellow
+    )
+    public static let batteryOrange: Color = adaptive(
+        light: Color(red: 0.78, green: 0.38, blue: 0.00),   // dark orange
+        dark:  Color(red: 1.000, green: 0.820, blue: 0.659) // peach
+    )
+    public static let batteryRed: Color    = adaptive(
+        light: Color(red: 0.78, green: 0.08, blue: 0.08),   // dark red
+        dark:  Color(red: 1.000, green: 0.702, blue: 0.757) // rose
+    )
 
-    public static let tmuxColor:          Color = Color(red: 0.678, green: 0.918, blue: 0.686) // mint-green
-    public static let pomodoroWorkColor:  Color = Color(red: 1.000, green: 0.420, blue: 0.420) // soft red
-    public static let pomodoroBreakColor: Color = spotifyActive                                  // mint
+    public static let tmuxColor:          Color = adaptive(
+        light: Color(red: 0.08, green: 0.52, blue: 0.08),   // forest green
+        dark:  Color(red: 0.678, green: 0.918, blue: 0.686) // mint-green
+    )
+    public static let pomodoroWorkColor:  Color = adaptive(
+        light: Color(red: 0.80, green: 0.08, blue: 0.08),   // dark red
+        dark:  Color(red: 1.000, green: 0.420, blue: 0.420) // soft red
+    )
+    public static let pomodoroBreakColor: Color = spotifyActive
 
     // MARK: - Layout
     public static let barHeight: CGFloat = 30
@@ -61,6 +94,18 @@ public enum Theme {
     public static let springLabelHover:    Animation = .spring(response: 0.3, dampingFraction: 0.75)
 
     // MARK: - Config helpers
+
+    /// Returns an adaptive Color that resolves to `dark` in Dark Mode and `light` in Light Mode.
+    /// Uses NSColor's dynamic provider — the same mechanism NSApp.appearance drives —
+    /// so colors update on theme switch and respect vibrancy behind glass materials.
+    public static func adaptive(light: Color, dark: Color) -> Color {
+        Color(NSColor(name: nil, dynamicProvider: { appearance in
+            switch appearance.bestMatch(from: [.aqua, .darkAqua]) {
+            case .darkAqua: return NSColor(dark)
+            default:        return NSColor(light)
+            }
+        }))
+    }
 
     public static func color(hex: String?) -> Color? {
         guard let hex, hex.hasPrefix("#") else { return nil }

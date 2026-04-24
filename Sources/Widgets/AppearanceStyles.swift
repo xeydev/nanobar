@@ -18,6 +18,7 @@ extension PillStyle {
     init(_ config: NanoConfig.PillConfig) {
         let variant: Variant = {
             switch config.style {
+            case "blur":  return .blur
             case "solid": return .solid
             case "none":  return .none
             default:      return .liquidGlass
@@ -52,9 +53,14 @@ extension PillStyle {
             glassDefault: GlassStateConfig(effect: mapEffect(g.defaultEffect)),
             glassHover:   GlassStateConfig(effect: mapEffect(g.hoverEffect)),
             glassToggled: GlassStateConfig(effect: mapEffect(g.toggledEffect)),
-            blurMaterial: mapBlurMaterial(g.blur.material),
-            blurSpecular: g.blur.specular,
-            blurShadow:   g.blur.shadow
+            blurMaterial:      mapBlurMaterial(g.blur.material),
+            blurSpecular:      g.blur.specular,
+            blurShadow:        g.blur.shadow,
+            blurStyleMaterial: mapBlurMaterial(config.blur.material),
+            blurStyleSpecular: config.blur.specular,
+            blurStyleShadow:   config.blur.shadow,
+            solidColor:        Theme.color(hex: config.solidColor),
+            solidShadow:       config.solidShadow
         )
     }
 }

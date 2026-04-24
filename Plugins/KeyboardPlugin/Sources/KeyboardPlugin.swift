@@ -106,7 +106,7 @@ private final class KeyboardWidgetFactory: NSObject, NanoBarWidgetFactory {
     var widgetID: String { "keyboard" }
 
     @MainActor func makeViewBox() -> NanoBarViewBox {
-        let color = Theme.color(hex: config["color"]!) ?? Theme.keyboardColor
+        let color = Theme.color(hex: config["color"] ?? "") ?? Theme.keyboardColor
         return NanoBarViewBox(AnyView(KeyboardWidgetView(color: color)))
     }
 }
@@ -122,6 +122,6 @@ public final class KeyboardPlugin: NSObject, NanoBarPluginEntry, NanoBarPluginSe
 
     public var displayName: String { "Keyboard" }
     public func settingsSchema() -> [SettingsField] {[
-        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: Theme.keyboardColor.toHex8() ?? ""),
+        SettingsField(key: "color", label: "Icon color", type: .color, defaultValue: "", adaptiveColor: Theme.keyboardColor),
     ]}
 }

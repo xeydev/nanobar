@@ -29,7 +29,16 @@ struct PillConfigEditor: View {
     @State private var hoverEffect:   String = "regular"
     @State private var toggledEffect: String = "regular"
 
-    // Blur fallback
+    // Solid
+    @State private var solidColor:  String = "#1C1C1ECC"
+    @State private var solidShadow: Bool   = false
+
+    // Blur style
+    @State private var blurStyleMaterial: String = "regular"
+    @State private var blurStyleSpecular: Bool   = true
+    @State private var blurStyleShadow:   Bool   = false
+
+    // LiquidGlass blur fallback
     @State private var blurMaterial: String = "regular"
     @State private var blurSpecular: Bool   = true
     @State private var blurShadow:   Bool   = true
@@ -37,12 +46,14 @@ struct PillConfigEditor: View {
     private var live: NanoConfig.PillConfig { liveConfig() ?? current }
     private var glassSection: String { "\(section).liquidGlass" }
     private var blurPath:     String { "\(section).liquidGlass.blur" }
+    private var blurStylePath: String { "\(section).blur" }
 
     var body: some View {
         Group {
             Section("Style") {
                 Picker("Style", selection: $localStyle) {
                     Text("Liquid Glass").tag("liquidGlass")
+                    Text("Blur").tag("blur")
                     Text("Solid").tag("solid")
                     Text("None").tag("none")
                 }
@@ -58,6 +69,43 @@ struct PillConfigEditor: View {
 
             BorderEditor(section: section, key: "border", current: live.border,
                          defaultBorder: defaults?.border)
+
+            if localStyle == "solid" {
+                Section("Solid") {
+                    LabeledContent("Color") {
+                        ColorPicker("", selection: solidColorBinding, supportsOpacity: true)
+                            .labelsHidden()
+                    }
+                    Toggle("Drop shadow", isOn: $solidShadow)
+                        .onChange(of: solidShadow) { _, v in
+                            write("solidShadow", .bool(v), isDefault: v == defaults?.solidShadow)
+                        }
+                }
+            }
+
+            if localStyle == "blur" {
+                Section("Blur") {
+                    Picker("Material", selection: $blurStyleMaterial) {
+                        Text("Regular").tag("regular")
+                        Text("Thin").tag("thin")
+                        Text("Ultra Thin").tag("ultraThin")
+                    }
+                    .onChange(of: blurStyleMaterial) { _, v in
+                        writeSection(blurStylePath, key: "material", value: .string(v),
+                                     isDefault: v == defaults?.blur.material)
+                    }
+                    Toggle("Specular highlight", isOn: $blurStyleSpecular)
+                        .onChange(of: blurStyleSpecular) { _, v in
+                            writeSection(blurStylePath, key: "specular", value: .bool(v),
+                                         isDefault: v == defaults?.blur.specular)
+                        }
+                    Toggle("Drop shadow", isOn: $blurStyleShadow)
+                        .onChange(of: blurStyleShadow) { _, v in
+                            writeSection(blurStylePath, key: "shadow", value: .bool(v),
+                                         isDefault: v == defaults?.blur.shadow)
+                        }
+                }
+            }
 
             if localStyle == "liquidGlass" {
                 Section("Liquid Glass") {
@@ -91,6 +139,18 @@ struct PillConfigEditor: View {
         }
         .onAppear { sync(live) }
         .onChange(of: live) { _, p in sync(p) }
+    }
+
+    // MARK: - Solid color binding
+
+    private var solidColorBinding: Binding<Color> {
+        Binding(
+            get: { Theme.color(hex: solidColor) ?? Color(red: 0.11, green: 0.11, blue: 0.118, opacity: 0.8) },
+            set: { color in
+                solidColor = color.toHex8() ?? "#1C1C1ECC"
+                write("solidColor", .string(solidColor), isDefault: solidColor == defaults?.solidColor)
+            }
+        )
     }
 
     // MARK: - Glass row helper
@@ -131,6 +191,11 @@ struct PillConfigEditor: View {
         localStyle        = p.style
         localHeight       = p.height
         localCornerRadius = p.cornerRadius
+        solidColor        = p.solidColor
+        solidShadow       = p.solidShadow
+        blurStyleMaterial = p.blur.material
+        blurStyleSpecular = p.blur.specular
+        blurStyleShadow   = p.blur.shadow
         let g = p.liquidGlass
         defaultEffect = g.defaultEffect
         hoverEffect   = g.hoverEffect
