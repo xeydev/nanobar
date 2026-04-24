@@ -186,7 +186,7 @@ public struct NanoPillModifier: ViewModifier {
         switch pillStyle.variant {
         case .liquidGlass:
             let tintOpacity: Double = hovered ? 0.3 : focused ? 0.5 : 0.0
-            let glass: Glass = tintOpacity > 0
+            let glass = tintOpacity > 0
                 ? makeGlass(from: activeState).tint(.white.opacity(tintOpacity))
                 : makeGlass(from: activeState)
             content
