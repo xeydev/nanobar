@@ -63,6 +63,13 @@ right  = ["keyboard", "volume", "battery", "clock"]
 
 That's all you need to get started. Everything else is optional.
 
+### App settings
+
+```toml
+[app]
+theme = "system"   # system | light | dark
+```
+
 ### Bar appearance
 
 ```toml
@@ -87,26 +94,33 @@ padding = { all = 8, left = 16 }
 
 ```toml
 [pill]
-style        = "liquidGlass"   # liquidGlass | solid | none
+style        = "liquidGlass"   # liquidGlass | blur | solid | none
 height       = 30
 cornerRadius = 15
 border       = true            # false | true | { width = 0.75, color = "#FFFFFF47" }
 
 [pill.liquidGlass]
-# Glass effect per interaction state. effect: "regular" | "clear" | "identity"
-# tint: "#RRGGBBAA" hex, or omit for no tint.
+# Glass effect per interaction state: "regular" | "clear" | "identity"
 defaultEffect = "clear"
-# defaultTint = "#FFFFFF20"
 hoverEffect   = "regular"
-hoverTint     = "#FFFFFF30"
 toggledEffect = "regular"
-toggledTint   = "#FFFFFF30"
 
 [pill.liquidGlass.blur]
 # Pre-macOS 26 fallback — ignored on macOS 26+ (glass handles itself).
 material = "regular"   # regular | thin | ultraThin
 specular = true
 shadow   = true
+
+[pill.blur]
+# Standalone blur style (vibrancy, works on all macOS 15+ versions).
+material = "regular"   # regular | thin | ultraThin
+specular = true
+shadow   = false
+
+[pill.solid]
+# Opaque pill. solidColor is an #RRGGBBAA hex string.
+# solidColor = "#1C1C1ECC"
+# solidShadow = false
 ```
 
 Override per-plugin:
